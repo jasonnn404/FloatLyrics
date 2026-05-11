@@ -4,6 +4,8 @@ FloatLyrics is a macOS desktop app that shows synced lyrics in a transparent, al
 
 This project is currently built for macOS only.
 
+> Early prototype: FloatLyrics is not packaged as a one-click app yet. For now, you run it from the project folder with Node.js.
+
 ## Overview
 
 FloatLyrics is an Electron desktop overlay for Spotify listeners. It connects to Spotify using Authorization Code Flow with PKCE, reads the current playback state, fetches synced LRC lyrics, and displays the current and next lyric line in a compact floating window.
@@ -50,7 +52,29 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 
 ## Installation
 
-Clone the repository and install dependencies:
+### Simple Setup
+
+1. Install [Node.js](https://nodejs.org/) if you do not already have it.
+2. Download this project from GitHub:
+   - Click the green `Code` button.
+   - Click `Download ZIP`.
+   - Unzip the folder.
+3. Open the macOS Terminal app.
+4. Drag the unzipped FloatLyrics folder into the Terminal window after typing `cd `.
+
+It should look something like this:
+
+```bash
+cd /Users/yourname/Downloads/FloatLyrics
+```
+
+5. Press Enter, then install the app dependencies:
+
+```bash
+npm install
+```
+
+If you are comfortable with Git, you can clone instead:
 
 ```bash
 git clone https://github.com/jasonnn404/FloatLyrics.git
@@ -60,16 +84,22 @@ npm install
 
 ## Spotify Setup
 
+FloatLyrics needs a Spotify Client ID so Spotify knows which local app is asking for playback access. You do not need a client secret.
+
 1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
-2. Create a Spotify app.
-3. Copy the app's Client ID.
-4. Add this Redirect URI exactly:
+2. Log in with your Spotify account.
+3. Click `Create app`.
+4. Use any name and description, for example:
+   - App name: `FloatLyrics`
+   - Description: `Local lyrics overlay`
+5. For Redirect URI, add this exactly:
 
 ```text
 http://127.0.0.1:5173/callback
 ```
 
-5. Save the Spotify app settings.
+6. Save the Spotify app.
+7. Open the app settings and copy the `Client ID`.
 
 FloatLyrics uses PKCE, so it does not need a client secret.
 
@@ -81,7 +111,9 @@ Required scopes:
 
 ## Environment Variables
 
-Create a `.env` file in the project root:
+In the FloatLyrics folder, create a file named `.env`.
+
+Paste this inside it, replacing `your_spotify_client_id` with the Client ID you copied from Spotify:
 
 ```bash
 VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
@@ -89,13 +121,32 @@ VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
 
 Do not commit `.env`.
 
+If you are using Terminal, you can create the file like this:
+
+```bash
+echo 'VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id' > .env
+```
+
+Then open `.env` and replace `your_spotify_client_id` with your real Spotify Client ID.
+
 ## Development
 
-Start the macOS desktop app in development mode:
+Start FloatLyrics:
 
 ```bash
 npm run dev
 ```
+
+When the app opens:
+
+1. Click `Login with Spotify`.
+2. Approve the Spotify permissions.
+3. Start playing a song in Spotify.
+4. FloatLyrics should show the synced lyrics overlay.
+
+To quit the app, click the red close button in the overlay.
+
+### Developer Commands
 
 Run type checking:
 
