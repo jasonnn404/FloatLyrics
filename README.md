@@ -4,7 +4,7 @@ FloatLyrics is a macOS desktop app that shows synced lyrics in a transparent, al
 
 This project is currently built for macOS only.
 
-> Early prototype: FloatLyrics is not packaged as a one-click app yet. For now, you run it from the project folder with Node.js.
+> Early prototype: FloatLyrics is macOS-only. If a DMG is not available in Releases yet, you can build it locally from the project folder.
 
 ## Overview
 
@@ -51,6 +51,20 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 ![FloatLyrics controls](./screenshots/settings.png)
 
 ## Installation
+
+### Download the macOS App
+
+If a release is available:
+
+1. Open the [FloatLyrics Releases page](https://github.com/jasonnn404/FloatLyrics/releases).
+2. Download the latest `.dmg`.
+3. Open the `.dmg`.
+4. Drag `FloatLyrics` into `Applications`.
+5. Open FloatLyrics.
+
+If macOS warns that the app cannot be opened because it is from an unidentified developer, right-click the app and choose `Open`.
+
+Current local builds are unsigned and not notarized. A signed macOS release is planned.
 
 ### Simple Setup
 
@@ -160,6 +174,19 @@ Build the app:
 npm run build
 ```
 
+Build a macOS DMG installer:
+
+```bash
+npm run dist:mac
+```
+
+The generated `.dmg` will be in the `release/` folder.
+
+On Apple Silicon, this creates:
+
+- `release/FloatLyrics-0.1.0-arm64.dmg`
+- `release/FloatLyrics-0.1.0-x64.dmg`
+
 Run the built app locally:
 
 ```bash
@@ -171,6 +198,7 @@ Note: the red close button quits the Electron app. The `predev` script also clea
 ## Roadmap
 
 - Package FloatLyrics as a signed macOS app
+- Publish downloadable GitHub Releases
 - Add saved user preferences for opacity and display mode
 - Improve lyric lookup matching for remasters, deluxe albums, and alternate titles
 - Add a small menu bar item

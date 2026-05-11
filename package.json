@@ -8,8 +8,41 @@
     "predev": "node scripts/free-dev-port.mjs",
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"tsc -p tsconfig.node.json --watch\" \"wait-on tcp:5173 dist-electron/main.js && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
     "build": "tsc && tsc -p tsconfig.node.json && vite build",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac dmg --arm64 --x64",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit"
+  },
+  "build": {
+    "appId": "com.jasonnn404.floatlyrics",
+    "productName": "FloatLyrics",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    }
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
@@ -25,6 +58,7 @@
     "concurrently": "^9.0.0",
     "cross-env": "^10.0.0",
     "electron": "^38.0.0",
+    "electron-builder": "^26.8.1",
     "typescript": "^5.8.0",
     "wait-on": "^8.0.0"
   }
