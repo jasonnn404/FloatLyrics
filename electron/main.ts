@@ -9,7 +9,7 @@ const execFileAsync = promisify(execFile);
 
 const spotifyRedirectUri = "http://127.0.0.1:5173/callback";
 const overlaySizes = {
-  small: { width: 680, height: 280 },
+  small: { width: 680, height: 320 },
   medium: { width: 900, height: 340 },
   large: { width: 1160, height: 420 }
 } as const;
@@ -21,7 +21,7 @@ function createWindow() {
     width: overlaySizes.medium.width,
     height: overlaySizes.medium.height,
     minWidth: 520,
-    minHeight: 260,
+    minHeight: 320,
     transparent: true,
     frame: false,
     resizable: true,

@@ -28,6 +28,8 @@ function App() {
   const [opacity, setOpacity] = useState(86);
   const [mode, setMode] = useState<DisplayMode>("compact");
   const [showControls, setShowControls] = useState(true);
+  const [showTitle, setShowTitle] = useState(true);
+  const [showTimer, setShowTimer] = useState(true);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(() => Boolean(getStoredTokens()));
   const [spotifyStatus, setSpotifyStatus] = useState("Spotify not connected");
   const [playback, setPlayback] = useState<SpotifyPlayback | null>(null);
@@ -246,36 +248,40 @@ function App() {
   return (
     <main className="overlay-shell" style={{ opacity: opacity / 100 }}>
       <section className="drag-region" aria-label="Draggable lyric overlay">
-        <div className="window-chrome" aria-label="Window controls">
+        <div className="top-bar">
+          <div className="window-chrome" aria-label="Window controls">
+            <button
+              className="close-control"
+              type="button"
+              aria-label="Close lyrics overlay"
+              title="Close overlay. Use Cmd+Shift+L or click the Dock icon to reopen."
+              onClick={handleCloseOverlay}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
           <button
-            className="close-control"
+            className="customize-button"
             type="button"
-            aria-label="Close lyrics overlay"
-            title="Close overlay. Use Cmd+Shift+L or click the Dock icon to reopen."
-            onClick={handleCloseOverlay}
+            aria-label={showControls ? "Hide controls" : "Show controls"}
+            title={showControls ? "Hide controls" : "Show controls"}
+            onClick={() => setShowControls((value) => !value)}
           >
-            <span aria-hidden="true">×</span>
+            <SlidersHorizontal size={15} />
+            <span>{showControls ? "Hide Controls" : "Show Controls"}</span>
           </button>
         </div>
-        <button
-          className="customize-button"
-          type="button"
-          aria-label={showControls ? "Hide controls" : "Show controls"}
-          title={showControls ? "Hide controls" : "Show controls"}
-          onClick={() => setShowControls((value) => !value)}
-        >
-          <SlidersHorizontal size={15} />
-          <span>{showControls ? "Hide Controls" : "Show Controls"}</span>
-        </button>
 
         <div className="lyrics" aria-live="polite">
           <div className="spotify-panel">
             {isSpotifyConnected ? (
               <>
-                <div className="track-title">{trackLabel}</div>
-                <div className="track-detail">
-                  <span>{playback ? progressLabel : spotifyStatus}</span>
-                </div>
+                {showTitle && <div className="track-title">{trackLabel}</div>}
+                {showTimer && (
+                  <div className="track-detail">
+                    <span>{playback ? progressLabel : spotifyStatus}</span>
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -350,6 +356,25 @@ function App() {
               onClick={() => setMode("focus")}
             >
               Focus
+            </button>
+          </div>
+          <div className="control-group" role="group" aria-label="Metadata display">
+            <span className="control-label">Show</span>
+            <button
+              type="button"
+              className={showTitle ? "active" : ""}
+              title="Show or hide song title"
+              onClick={() => setShowTitle((value) => !value)}
+            >
+              Title
+            </button>
+            <button
+              type="button"
+              className={showTimer ? "active" : ""}
+              title="Show or hide playback time"
+              onClick={() => setShowTimer((value) => !value)}
+            >
+              Time
             </button>
           </div>
           <label className="opacity-control">
