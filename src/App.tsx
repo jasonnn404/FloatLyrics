@@ -17,11 +17,71 @@ import { formatTime, getActiveLyricIndex, getLyrics, type LyricLine } from "./li
 type DisplayMode = "compact" | "focus";
 
 const mockLyrics = [
-  "Connect to Spotify",
+  "Open Spotify desktop",
   "Synced lyrics will appear here"
 ];
 
 const playbackTickMs = 250;
+
+async function getSystemSpotifyPlayback() {
+  try {
+    return (await window.floatLyrics?.getSystemPlayback()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function formatPlaybackStatus(playback: SpotifyPlayback, source: "Spotify" | "Spotify desktop") {
+  return playback.is_playing ? `${source} playing` : `${source} paused`;
+}
+
+function formatSpotifyPlaybackError(error: unknown) {
+  const message = error instanceof Error ? error.message : "Spotify playback failed";
+
+  if (message.includes("(403)")) {
+    return "Spotify API blocked. Use Spotify desktop or check Premium/allowlist.";
+  }
+
+  return message;
+}
+
+async function getPlaybackSnapshot(isSpotifyConnected: boolean) {
+  let apiError: unknown = null;
+
+  const systemPlayback = await getSystemSpotifyPlayback();
+  if (systemPlayback) {
+    return {
+      playback: systemPlayback,
+      status: formatPlaybackStatus(systemPlayback, "Spotify desktop")
+    };
+  }
+
+  if (isSpotifyConnected) {
+    try {
+      const apiPlayback = await getCurrentPlayback();
+      if (apiPlayback) {
+        return {
+          playback: apiPlayback,
+          status: formatPlaybackStatus(apiPlayback, "Spotify")
+        };
+      }
+    } catch (error) {
+      apiError = error;
+    }
+  }
+
+  if (apiError) {
+    return {
+      playback: null,
+      status: formatSpotifyPlaybackError(apiError)
+    };
+  }
+
+  return {
+    playback: null,
+    status: isSpotifyConnected ? "No active Spotify playback" : "Open Spotify desktop or connect to Spotify"
+  };
+}
 
 function App() {
   const [currentLine, setCurrentLine] = useState(0);
@@ -36,7 +96,7 @@ function App() {
   const [playbackUpdatedAt, setPlaybackUpdatedAt] = useState(Date.now());
   const [playbackClock, setPlaybackClock] = useState(Date.now());
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
-  const [lyricsStatus, setLyricsStatus] = useState("Connect to Spotify");
+  const [lyricsStatus, setLyricsStatus] = useState("Open Spotify desktop");
 
   const estimatedProgressMs = useMemo(() => {
     if (!playback) return 0;
@@ -58,8 +118,9 @@ function App() {
   );
 
   const hasSyncedLyrics = lyrics.length > 0;
+  const hasPlaybackContext = isSpotifyConnected || Boolean(playback);
   const currentLyricText =
-    lyrics[currentLine]?.text ?? (isSpotifyConnected ? lyricsStatus : mockLyrics[currentLine]);
+    lyrics[currentLine]?.text ?? (hasPlaybackContext ? lyricsStatus : mockLyrics[currentLine]);
   const trackLabel = playback ? `${playback.title} - ${playback.artist}` : "Waiting for Spotify";
   const progressLabel = playback
     ? `${formatTime(estimatedProgressMs)} / ${formatTime(playback.duration_ms)}`
@@ -130,21 +191,20 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!isSpotifyConnected) return;
-
     let isStopped = false;
 
     async function pollPlayback() {
       try {
-        const currentPlayback = await getCurrentPlayback();
+        const snapshot = await getPlaybackSnapshot(isSpotifyConnected);
         if (isStopped) return;
 
-        setPlayback(currentPlayback);
+        setPlayback(snapshot.playback);
         setPlaybackUpdatedAt(Date.now());
-        setSpotifyStatus(currentPlayback ? "Spotify playing" : "No active Spotify playback");
+        setSpotifyStatus(snapshot.status);
       } catch (error) {
         if (isStopped) return;
-        setSpotifyStatus(error instanceof Error ? error.message : "Spotify playback failed");
+        setPlayback(null);
+        setSpotifyStatus(formatSpotifyPlaybackError(error));
       }
     }
 
@@ -160,7 +220,9 @@ function App() {
   useEffect(() => {
     if (!playback) {
       setLyrics([]);
-      setLyricsStatus(isSpotifyConnected ? "No active Spotify playback" : "Connect to Spotify");
+      setLyricsStatus(
+        isSpotifyConnected ? "No active Spotify playback" : "Open Spotify desktop or connect to Spotify"
+      );
       return;
     }
 
@@ -228,10 +290,10 @@ function App() {
       }
 
       window.setTimeout(() => {
-        void getCurrentPlayback().then((currentPlayback) => {
-          setPlayback(currentPlayback);
+        void getPlaybackSnapshot(isSpotifyConnected).then((snapshot) => {
+          setPlayback(snapshot.playback);
           setPlaybackUpdatedAt(Date.now());
-          setSpotifyStatus(currentPlayback ? "Spotify playing" : "No active Spotify playback");
+          setSpotifyStatus(snapshot.status);
         });
       }, 350);
     } catch (error) {
@@ -274,7 +336,7 @@ function App() {
 
         <div className="lyrics" aria-live="polite">
           <div className="spotify-panel">
-            {isSpotifyConnected ? (
+            {hasPlaybackContext ? (
               <>
                 {showTitle && <div className="track-title">{trackLabel}</div>}
                 {showTimer && (
@@ -285,30 +347,31 @@ function App() {
               </>
             ) : (
               <>
-                <div className="connect-title">Connect to Spotify</div>
+                <div className="connect-title">Open Spotify desktop</div>
                 <div className="connect-copy">Play a song and FloatLyrics will follow along.</div>
-                <button
-                  className="spotify-login action-button primary-action"
-                  type="button"
-                  disabled={!hasSpotifyClientId()}
-                  onClick={handleSpotifyLogin}
-                >
-                  <LogIn size={16} />
-                  <span>Login with Spotify</span>
-                </button>
+                {hasSpotifyClientId() && (
+                  <button
+                    className="spotify-login action-button primary-action"
+                    type="button"
+                    onClick={handleSpotifyLogin}
+                  >
+                    <LogIn size={16} />
+                    <span>Connect Spotify API</span>
+                  </button>
+                )}
               </>
             )}
           </div>
 
-          {isSpotifyConnected && <p className="current-line">{currentLyricText}</p>}
-          {isSpotifyConnected && mode === "compact" && hasSyncedLyrics && (
+          {hasPlaybackContext && <p className="current-line">{currentLyricText}</p>}
+          {hasPlaybackContext && mode === "compact" && hasSyncedLyrics && (
             <p className="next-line">{nextLine}</p>
           )}
         </div>
 
         {showControls && (
         <section className="controls" aria-label="Overlay controls">
-          {isSpotifyConnected && (
+          {hasPlaybackContext && (
             <div className="playback-controls" role="group" aria-label="Spotify playback controls">
               <button
                 className="round-button"

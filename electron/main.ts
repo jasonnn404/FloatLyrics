@@ -8,6 +8,8 @@ let spotifyAuthWindow: BrowserWindow | null = null;
 const execFileAsync = promisify(execFile);
 
 const spotifyRedirectUri = "http://127.0.0.1:5173/callback";
+const spotifyNoPlayback = "__FLOATLYRICS_NO_PLAYBACK__";
+const spotifyFieldDelimiter = "__FLOATLYRICS_FIELD__";
 const overlaySizes = {
   small: { width: 680, height: 320 },
   medium: { width: 900, height: 340 },
@@ -15,6 +17,14 @@ const overlaySizes = {
 } as const;
 
 type OverlaySize = keyof typeof overlaySizes;
+type SystemSpotifyPlayback = {
+  title: string;
+  artist: string;
+  album: string;
+  progress_ms: number;
+  duration_ms: number;
+  is_playing: boolean;
+};
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -120,6 +130,69 @@ ipcMain.handle("spotify:system-control", async (_event, action: "previous" | "pl
   ]);
 
   return true;
+});
+
+ipcMain.handle("spotify:get-system-playback", async (): Promise<SystemSpotifyPlayback | null> => {
+  if (process.platform !== "darwin") {
+    return null;
+  }
+
+  try {
+    const { stdout } = await execFileAsync("osascript", [
+      "-e",
+      'tell application "Spotify"',
+      "-e",
+      `if player state is stopped then return "${spotifyNoPlayback}"`,
+      "-e",
+      "set currentTrack to current track",
+      "-e",
+      "set trackName to name of currentTrack",
+      "-e",
+      "set trackArtist to artist of currentTrack",
+      "-e",
+      "set trackAlbum to album of currentTrack",
+      "-e",
+      "set trackDuration to duration of currentTrack",
+      "-e",
+      "set trackPosition to player position",
+      "-e",
+      "set playbackState to player state as text",
+      "-e",
+      `return trackName & "${spotifyFieldDelimiter}" & trackArtist & "${spotifyFieldDelimiter}" & trackAlbum & "${spotifyFieldDelimiter}" & (trackDuration as text) & "${spotifyFieldDelimiter}" & (trackPosition as text) & "${spotifyFieldDelimiter}" & playbackState`,
+      "-e",
+      "end tell"
+    ]);
+
+    const output = stdout.trim();
+    if (!output || output === spotifyNoPlayback) {
+      return null;
+    }
+
+    const [title, artist, album, duration, position, playbackState] =
+      output.split(spotifyFieldDelimiter);
+    const durationMs = Number(duration);
+    const positionSeconds = Number(position);
+
+    if (
+      !title ||
+      !playbackState ||
+      !Number.isFinite(durationMs) ||
+      !Number.isFinite(positionSeconds)
+    ) {
+      return null;
+    }
+
+    return {
+      title,
+      artist: artist || "Unknown artist",
+      album: album || "Unknown album",
+      duration_ms: Math.max(0, Math.round(durationMs)),
+      progress_ms: Math.max(0, Math.round(positionSeconds * 1000)),
+      is_playing: playbackState === "playing"
+    };
+  } catch {
+    return null;
+  }
 });
 
 ipcMain.handle("spotify:open-auth-window", (_event, authUrl: string) => {

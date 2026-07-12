@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("floatLyrics", {
   closeOverlay: () => ipcRenderer.invoke("overlay:close"),
   setOverlaySize: (size: "small" | "medium" | "large") =>
     ipcRenderer.invoke("overlay:set-size", size),
+  getSystemPlayback: () => ipcRenderer.invoke("spotify:get-system-playback"),
   controlSpotify: (action: "previous" | "playPause" | "next") =>
     ipcRenderer.invoke("spotify:system-control", action),
   openSpotifyAuthWindow: (authUrl: string) =>
