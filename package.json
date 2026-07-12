@@ -1,6 +1,6 @@
 {
   "name": "floatlyrics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Transparent macOS desktop overlay for synced lyrics.",
   "main": "dist-electron/main.js",
