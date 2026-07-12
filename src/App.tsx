@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { LogIn, Pause, Play, SkipBack, SkipForward, SlidersHorizontal } from "lucide-react";
+import { LogIn, Pause, Play, RefreshCw, SkipBack, SkipForward, SlidersHorizontal } from "lucide-react";
 import {
   exchangeCallbackForTokens,
   getCurrentPlayback,
@@ -97,6 +97,8 @@ function App() {
   const [playbackClock, setPlaybackClock] = useState(Date.now());
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [lyricsStatus, setLyricsStatus] = useState("Open Spotify desktop");
+  const [isLyricsLoading, setIsLyricsLoading] = useState(false);
+  const [lyricsRetryCount, setLyricsRetryCount] = useState(0);
 
   const estimatedProgressMs = useMemo(() => {
     if (!playback) return 0;
@@ -119,6 +121,7 @@ function App() {
 
   const hasSyncedLyrics = lyrics.length > 0;
   const hasPlaybackContext = isSpotifyConnected || Boolean(playback);
+  const canRetryLyrics = Boolean(playback) && !hasSyncedLyrics && !isLyricsLoading;
   const currentLyricText =
     lyrics[currentLine]?.text ?? (hasPlaybackContext ? lyricsStatus : mockLyrics[currentLine]);
   const trackLabel = playback ? `${playback.title} - ${playback.artist}` : "Waiting for Spotify";
@@ -220,6 +223,7 @@ function App() {
   useEffect(() => {
     if (!playback) {
       setLyrics([]);
+      setIsLyricsLoading(false);
       setLyricsStatus(
         isSpotifyConnected ? "No active Spotify playback" : "Open Spotify desktop or connect to Spotify"
       );
@@ -229,6 +233,7 @@ function App() {
     let isCancelled = false;
 
     setLyrics([]);
+    setIsLyricsLoading(true);
     setLyricsStatus("Finding synced lyrics...");
 
     getLyrics({
@@ -240,6 +245,7 @@ function App() {
         if (isCancelled) return;
 
         setLyrics(lines);
+        setIsLyricsLoading(false);
         setLyricsStatus(lines.length > 0 ? "" : "No synced lyrics found");
         setCurrentLine(lines.length > 0 ? getActiveLyricIndex(lines, estimatedProgressMs) : 0);
       })
@@ -247,6 +253,7 @@ function App() {
         if (isCancelled) return;
 
         setLyrics([]);
+        setIsLyricsLoading(false);
         setLyricsStatus(error instanceof Error ? error.message : "Lyrics lookup failed");
         setCurrentLine(0);
       });
@@ -254,7 +261,7 @@ function App() {
     return () => {
       isCancelled = true;
     };
-  }, [playback?.title, playback?.artist, playback?.duration_ms, isSpotifyConnected]);
+  }, [playback?.title, playback?.artist, playback?.duration_ms, isSpotifyConnected, lyricsRetryCount]);
 
   async function handleSpotifyLogin() {
     try {
@@ -267,6 +274,12 @@ function App() {
 
   function handleCloseOverlay() {
     void window.floatLyrics?.closeOverlay();
+  }
+
+  function handleRetryLyrics() {
+    if (!playback || isLyricsLoading) return;
+
+    setLyricsRetryCount((count) => count + 1);
   }
 
   async function handlePlaybackControl(action: "previous" | "playPause" | "next") {
@@ -364,6 +377,18 @@ function App() {
           </div>
 
           {hasPlaybackContext && <p className="current-line">{currentLyricText}</p>}
+          {canRetryLyrics && (
+            <button
+              className="lyrics-retry action-button"
+              type="button"
+              aria-label="Retry lyrics lookup"
+              title="Retry lyrics lookup"
+              onClick={handleRetryLyrics}
+            >
+              <RefreshCw size={15} />
+              <span>Retry</span>
+            </button>
+          )}
           {hasPlaybackContext && mode === "compact" && hasSyncedLyrics && (
             <p className="next-line">{nextLine}</p>
           )}

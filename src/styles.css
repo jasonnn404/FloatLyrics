@@ -157,6 +157,18 @@ input {
   line-height: 1.25;
 }
 
+.lyrics-retry {
+  margin-top: 12px;
+  background: rgb(255 255 255 / 11%);
+  box-shadow:
+    0 10px 26px rgb(0 0 0 / 20%),
+    inset 0 1px 0 rgb(255 255 255 / 9%);
+}
+
+.lyrics-retry:hover {
+  background: rgb(255 255 255 / 18%);
+}
+
 .window-chrome {
   display: inline-flex;
   align-items: center;
