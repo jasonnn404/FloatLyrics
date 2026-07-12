@@ -66,7 +66,9 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 If a release is available:
 
 1. Open the [FloatLyrics Releases page](https://github.com/jasonnn404/FloatLyrics/releases).
-2. Download the latest `.dmg`.
+2. Download the latest `.dmg` for your Mac:
+   - `arm64` for Apple Silicon Macs
+   - `x64` for Intel Macs
 3. Open the `.dmg`.
 4. Drag `FloatLyrics` into `Applications`.
 5. Open FloatLyrics.
@@ -220,6 +222,17 @@ On Apple Silicon, this creates:
 - `release/FloatLyrics-0.1.0-arm64.dmg`
 - `release/FloatLyrics-0.1.0-x64.dmg`
 
+Publish the generated installers as GitHub Release downloads:
+
+```bash
+gh release create v0.1.0 \
+  release/FloatLyrics-0.1.0-arm64.dmg \
+  release/FloatLyrics-0.1.0-x64.dmg \
+  --target main \
+  --title "FloatLyrics 0.1.0" \
+  --notes "Local-first Spotify desktop playback, optional Spotify API fallback, lyrics caching, fixed packaged app launch, and a new app icon."
+```
+
 Run the built app locally:
 
 ```bash
@@ -231,7 +244,6 @@ Note: the red close button quits the Electron app. The `predev` script also clea
 ## Roadmap
 
 - Package FloatLyrics as a signed macOS app
-- Publish downloadable GitHub Releases
 - Add saved user preferences for opacity and display mode
 - Improve lyric lookup matching for remasters, deluxe albums, and alternate titles
 - Add a small menu bar item
