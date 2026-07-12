@@ -1,10 +1,12 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, shell } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain, nativeImage, shell, type NativeImage } from "electron";
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
 let mainWindow: BrowserWindow | null = null;
 let spotifyAuthWindow: BrowserWindow | null = null;
+let runtimeAppIcon: NativeImage | undefined;
 const execFileAsync = promisify(execFile);
 
 const spotifyRedirectUri = "http://127.0.0.1:5173/callback";
@@ -26,6 +28,17 @@ type SystemSpotifyPlayback = {
   is_playing: boolean;
 };
 
+function loadAppIcon() {
+  const iconPath = app.isPackaged
+    ? path.join(app.getAppPath(), "build", "icon.png")
+    : path.join(process.cwd(), "build", "icon.png");
+
+  if (!existsSync(iconPath)) return undefined;
+
+  const icon = nativeImage.createFromPath(iconPath);
+  return icon.isEmpty() ? undefined : icon;
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: overlaySizes.medium.width,
@@ -37,6 +50,7 @@ function createWindow() {
     resizable: true,
     alwaysOnTop: true,
     hasShadow: false,
+    icon: runtimeAppIcon,
     titleBarStyle: "hidden",
     trafficLightPosition: { x: -100, y: -100 },
     backgroundColor: "#00000000",
@@ -64,6 +78,11 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  runtimeAppIcon = loadAppIcon();
+  if (process.platform === "darwin" && runtimeAppIcon) {
+    app.dock?.setIcon(runtimeAppIcon);
+  }
+
   createWindow();
 
   globalShortcut.register("CommandOrControl+Shift+L", () => {
@@ -211,6 +230,7 @@ ipcMain.handle("spotify:open-auth-window", (_event, authUrl: string) => {
     minimizable: true,
     maximizable: true,
     alwaysOnTop: true,
+    icon: runtimeAppIcon,
     fullscreenable: false,
     show: false,
     webPreferences: {
