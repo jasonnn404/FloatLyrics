@@ -1,24 +1,32 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, nativeImage, shell, type NativeImage } from "electron";
+import {
+  app,
+  BrowserWindow,
+  globalShortcut,
+  ipcMain,
+  nativeImage,
+  screen,
+  shell,
+  type NativeImage,
+  type Rectangle
+} from "electron";
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
 let mainWindow: BrowserWindow | null = null;
 let spotifyAuthWindow: BrowserWindow | null = null;
 let runtimeAppIcon: NativeImage | undefined;
+let overlayResize: { startBounds: Rectangle; startX: number; startY: number } | null = null;
+let boundsSaveTimer: NodeJS.Timeout | null = null;
 const execFileAsync = promisify(execFile);
 
 const spotifyRedirectUri = "http://127.0.0.1:5173/callback";
 const spotifyNoPlayback = "__FLOATLYRICS_NO_PLAYBACK__";
 const spotifyFieldDelimiter = "__FLOATLYRICS_FIELD__";
-const overlaySizes = {
-  small: { width: 680, height: 320 },
-  medium: { width: 900, height: 340 },
-  large: { width: 1160, height: 420 }
-} as const;
+const defaultOverlaySize = { width: 900, height: 340 };
+const minimumOverlaySize = { width: 340, height: 180 };
 
-type OverlaySize = keyof typeof overlaySizes;
 type SystemSpotifyPlayback = {
   title: string;
   artist: string;
@@ -27,6 +35,19 @@ type SystemSpotifyPlayback = {
   duration_ms: number;
   is_playing: boolean;
 };
+
+function getDefaultOverlayBounds(size = defaultOverlaySize) {
+  const workArea = screen.getPrimaryDisplay().workArea;
+  const width = Math.min(size.width, workArea.width);
+  const height = Math.min(size.height, workArea.height);
+
+  return {
+    x: Math.round(workArea.x + (workArea.width - width) / 2),
+    y: Math.round(workArea.y + (workArea.height - height) / 2),
+    width,
+    height
+  };
+}
 
 function loadAppIcon() {
   const iconPath = app.isPackaged
@@ -39,15 +60,114 @@ function loadAppIcon() {
   return icon.isEmpty() ? undefined : icon;
 }
 
+function loadOverlayBounds() {
+  try {
+    const savedBounds = JSON.parse(
+      readFileSync(path.join(app.getPath("userData"), "window-size.json"), "utf8")
+    ) as { x?: unknown; y?: unknown; width?: unknown; height?: unknown };
+    const width = Number.isFinite(savedBounds.width)
+      ? Math.max(minimumOverlaySize.width, Math.round(savedBounds.width as number))
+      : defaultOverlaySize.width;
+    const height = Number.isFinite(savedBounds.height)
+      ? Math.max(minimumOverlaySize.height, Math.round(savedBounds.height as number))
+      : defaultOverlaySize.height;
+
+    if (!Number.isFinite(savedBounds.x) || !Number.isFinite(savedBounds.y)) {
+      return getDefaultOverlayBounds({ width, height });
+    }
+
+    const display = screen.getDisplayMatching({
+      x: Math.round(savedBounds.x as number),
+      y: Math.round(savedBounds.y as number),
+      width,
+      height
+    });
+    const workArea = display.workArea;
+    const visibleWidth = Math.min(width, workArea.width);
+    const visibleHeight = Math.min(height, workArea.height);
+
+    return {
+      x: Math.min(
+        workArea.x + workArea.width - visibleWidth,
+        Math.max(workArea.x, Math.round(savedBounds.x as number))
+      ),
+      y: Math.min(
+        workArea.y + workArea.height - visibleHeight,
+        Math.max(workArea.y, Math.round(savedBounds.y as number))
+      ),
+      width: visibleWidth,
+      height: visibleHeight
+    };
+  } catch {
+    return getDefaultOverlayBounds();
+  }
+}
+
+function keepOverlayReachable() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  const bounds = mainWindow.getBounds();
+  const display = screen.getDisplayMatching(bounds);
+  const workArea = display.workArea;
+  const visibleDragWidth = Math.min(80, bounds.width);
+  const visibleDragHeight = Math.min(32, bounds.height);
+  const x = Math.min(
+    workArea.x + workArea.width - visibleDragWidth,
+    Math.max(workArea.x - bounds.width + visibleDragWidth, bounds.x)
+  );
+  const y = Math.min(
+    workArea.y + workArea.height - visibleDragHeight,
+    Math.max(workArea.y, bounds.y)
+  );
+
+  if (x !== bounds.x || y !== bounds.y) {
+    mainWindow.setPosition(x, y, false);
+  }
+}
+
+function fitOverlayToCurrentDisplay() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  const bounds = mainWindow.getBounds();
+  const workArea = screen.getDisplayMatching(bounds).workArea;
+  const width = Math.min(bounds.width, workArea.width);
+  const height = Math.min(bounds.height, workArea.height);
+  const x = Math.min(workArea.x + workArea.width - width, Math.max(workArea.x, bounds.x));
+  const y = Math.min(workArea.y + workArea.height - height, Math.max(workArea.y, bounds.y));
+
+  mainWindow.setBounds({ x, y, width, height }, false);
+}
+
+function saveOverlayBounds(window: BrowserWindow) {
+  try {
+    writeFileSync(
+      path.join(app.getPath("userData"), "window-size.json"),
+      JSON.stringify(window.getBounds())
+    );
+  } catch {
+    // Window persistence should not interfere with the overlay.
+  }
+}
+
+function scheduleOverlayBoundsSave() {
+  if (boundsSaveTimer) clearTimeout(boundsSaveTimer);
+  boundsSaveTimer = setTimeout(() => {
+    boundsSaveTimer = null;
+    if (mainWindow && !mainWindow.isDestroyed()) saveOverlayBounds(mainWindow);
+  }, 250);
+}
+
 function createWindow() {
+  const initialBounds = loadOverlayBounds();
+
   mainWindow = new BrowserWindow({
-    width: overlaySizes.medium.width,
-    height: overlaySizes.medium.height,
-    minWidth: 520,
-    minHeight: 320,
+    ...initialBounds,
+    minWidth: minimumOverlaySize.width,
+    minHeight: minimumOverlaySize.height,
     transparent: true,
     frame: false,
-    resizable: true,
+    resizable: false,
+    maximizable: false,
     alwaysOnTop: true,
     hasShadow: false,
     icon: runtimeAppIcon,
@@ -72,8 +192,20 @@ function createWindow() {
     void mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
 
+  mainWindow.on("close", () => {
+    if (mainWindow) saveOverlayBounds(mainWindow);
+  });
+
   mainWindow.on("closed", () => {
+    overlayResize = null;
     mainWindow = null;
+  });
+
+  mainWindow.on("resize", scheduleOverlayBoundsSave);
+  mainWindow.on("move", scheduleOverlayBoundsSave);
+  mainWindow.on("moved", keepOverlayReachable);
+  mainWindow.on("blur", () => {
+    overlayResize = null;
   });
 }
 
@@ -85,9 +217,13 @@ app.whenReady().then(() => {
 
   createWindow();
 
+  screen.on("display-removed", fitOverlayToCurrentDisplay);
+  screen.on("display-metrics-changed", fitOverlayToCurrentDisplay);
+
   globalShortcut.register("CommandOrControl+Shift+L", () => {
     if (!mainWindow) return;
     if (mainWindow.isVisible()) {
+      overlayResize = null;
       mainWindow.hide();
     } else {
       mainWindow.show();
@@ -119,20 +255,62 @@ ipcMain.handle("overlay:close", () => {
   app.quit();
 });
 
-ipcMain.handle("overlay:set-size", (_event, size: OverlaySize) => {
-  if (!mainWindow || !(size in overlaySizes)) return;
+ipcMain.on("overlay:resize-start", (event, screenX: number, screenY: number) => {
+  if (
+    !mainWindow ||
+    event.sender !== mainWindow.webContents ||
+    !Number.isFinite(screenX) ||
+    !Number.isFinite(screenY)
+  ) return;
 
-  const bounds = mainWindow.getBounds();
-  const nextSize = overlaySizes[size];
+  overlayResize = {
+    startBounds: mainWindow.getBounds(),
+    startX: screenX,
+    startY: screenY
+  };
+});
 
-  mainWindow.setBounds({
-    x: Math.round(bounds.x + (bounds.width - nextSize.width) / 2),
-    y: Math.round(bounds.y + (bounds.height - nextSize.height) / 2),
-    width: nextSize.width,
-    height: nextSize.height
-  });
-  mainWindow.show();
-  mainWindow.focus();
+ipcMain.on("overlay:resize", (event, screenX: number, screenY: number) => {
+  if (
+    !mainWindow ||
+    !overlayResize ||
+    event.sender !== mainWindow.webContents ||
+    !Number.isFinite(screenX) ||
+    !Number.isFinite(screenY)
+  ) return;
+
+  const { startBounds, startX, startY } = overlayResize;
+  const display = screen.getDisplayMatching(startBounds);
+  const maximumWidth = Math.max(
+    minimumOverlaySize.width,
+    startBounds.width,
+    display.workArea.x + display.workArea.width - startBounds.x
+  );
+  const maximumHeight = Math.max(
+    minimumOverlaySize.height,
+    startBounds.height,
+    display.workArea.y + display.workArea.height - startBounds.y
+  );
+  const width = Math.min(
+    maximumWidth,
+    Math.max(minimumOverlaySize.width, Math.round(startBounds.width + screenX - startX))
+  );
+  const height = Math.min(
+    maximumHeight,
+    Math.max(minimumOverlaySize.height, Math.round(startBounds.height + screenY - startY))
+  );
+
+  const currentBounds = mainWindow.getBounds();
+  if (currentBounds.width === width && currentBounds.height === height) return;
+
+  mainWindow.setBounds({ ...startBounds, width, height }, false);
+});
+
+ipcMain.on("overlay:resize-end", (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return;
+
+  overlayResize = null;
+  scheduleOverlayBoundsSave();
 });
 
 ipcMain.handle("spotify:system-control", async (_event, action: "previous" | "playPause" | "next") => {

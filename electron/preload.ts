@@ -3,8 +3,11 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("floatLyrics", {
   toggleOverlay: () => ipcRenderer.invoke("overlay:toggle"),
   closeOverlay: () => ipcRenderer.invoke("overlay:close"),
-  setOverlaySize: (size: "small" | "medium" | "large") =>
-    ipcRenderer.invoke("overlay:set-size", size),
+  startOverlayResize: (screenX: number, screenY: number) =>
+    ipcRenderer.send("overlay:resize-start", screenX, screenY),
+  resizeOverlay: (screenX: number, screenY: number) =>
+    ipcRenderer.send("overlay:resize", screenX, screenY),
+  endOverlayResize: () => ipcRenderer.send("overlay:resize-end"),
   getSystemPlayback: () => ipcRenderer.invoke("spotify:get-system-playback"),
   controlSpotify: (action: "previous" | "playPause" | "next") =>
     ipcRenderer.invoke("spotify:system-control", action),

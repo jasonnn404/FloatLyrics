@@ -7,7 +7,9 @@ declare global {
     floatLyrics?: {
       toggleOverlay: () => Promise<void>;
       closeOverlay: () => Promise<void>;
-      setOverlaySize: (size: "small" | "medium" | "large") => Promise<void>;
+      startOverlayResize: (screenX: number, screenY: number) => void;
+      resizeOverlay: (screenX: number, screenY: number) => void;
+      endOverlayResize: () => void;
       getSystemPlayback: () => Promise<SpotifyPlayback | null>;
       controlSpotify: (action: "previous" | "playPause" | "next") => Promise<boolean>;
       openSpotifyAuthWindow: (authUrl: string) => Promise<void>;

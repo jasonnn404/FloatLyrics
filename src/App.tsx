@@ -1,5 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
-import { LogIn, Pause, Play, RefreshCw, SkipBack, SkipForward, SlidersHorizontal } from "lucide-react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent
+} from "react";
+import {
+  Blend,
+  GripHorizontal,
+  LogIn,
+  Minus,
+  Pause,
+  Play,
+  Plus,
+  RefreshCw,
+  SkipBack,
+  SkipForward,
+  SlidersHorizontal,
+  Type
+} from "lucide-react";
 import {
   exchangeCallbackForTokens,
   getCurrentPlayback,
@@ -13,8 +34,16 @@ import {
   type SpotifyPlayback
 } from "./lib/spotify";
 import { formatTime, getActiveLyricIndex, getLyrics, type LyricLine } from "./lib/lyrics";
+import { romanizeLyrics } from "./lib/romanize";
 
 type DisplayMode = "compact" | "focus";
+type LyricsTextMode = "original" | "romanized";
+type ResizeDrag = {
+  pointerId: number;
+  nextX: number;
+  nextY: number;
+  animationFrame: number | null;
+};
 
 const mockLyrics = [
   "Open Spotify desktop",
@@ -22,6 +51,21 @@ const mockLyrics = [
 ];
 
 const playbackTickMs = 250;
+const fontScaleStorageKey = "floatlyrics.font-scale";
+const minimumFontScale = 70;
+const maximumFontScale = 160;
+const fontScaleStep = 10;
+
+function getStoredFontScale() {
+  try {
+    const value = Number(localStorage.getItem(fontScaleStorageKey));
+    return Number.isFinite(value) && value >= minimumFontScale && value <= maximumFontScale
+      ? value
+      : 100;
+  } catch {
+    return 100;
+  }
+}
 
 async function getSystemSpotifyPlayback() {
   try {
@@ -84,18 +128,25 @@ async function getPlaybackSnapshot(isSpotifyConnected: boolean) {
 }
 
 function App() {
+  const resizeDrag = useRef<ResizeDrag | null>(null);
+  const lyricsContainer = useRef<HTMLDivElement | null>(null);
+  const lyricsContent = useRef<HTMLDivElement | null>(null);
   const [currentLine, setCurrentLine] = useState(0);
   const [opacity, setOpacity] = useState(86);
   const [mode, setMode] = useState<DisplayMode>("compact");
   const [showControls, setShowControls] = useState(true);
   const [showTitle, setShowTitle] = useState(true);
   const [showTimer, setShowTimer] = useState(true);
+  const [fontScale, setFontScale] = useState(getStoredFontScale);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(() => Boolean(getStoredTokens()));
   const [spotifyStatus, setSpotifyStatus] = useState("Spotify not connected");
   const [playback, setPlayback] = useState<SpotifyPlayback | null>(null);
   const [playbackUpdatedAt, setPlaybackUpdatedAt] = useState(Date.now());
   const [playbackClock, setPlaybackClock] = useState(Date.now());
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
+  const [romanizedLyrics, setRomanizedLyrics] = useState<LyricLine[]>([]);
+  const [lyricsTextMode, setLyricsTextMode] = useState<LyricsTextMode>("original");
+  const [isRomanizing, setIsRomanizing] = useState(false);
   const [lyricsStatus, setLyricsStatus] = useState("Open Spotify desktop");
   const [isLyricsLoading, setIsLyricsLoading] = useState(false);
   const [lyricsRetryCount, setLyricsRetryCount] = useState(0);
@@ -110,20 +161,24 @@ function App() {
     );
   }, [playback, playbackClock, playbackUpdatedAt]);
 
+  const displayedLyrics =
+    lyricsTextMode === "romanized" && romanizedLyrics.length > 0 ? romanizedLyrics : lyrics;
   const nextLine = useMemo(
     () => {
-      const sourceLines = lyrics.length > 0 ? lyrics : mockLyrics.map((text) => ({ text }));
+      const sourceLines = displayedLyrics.length > 0
+        ? displayedLyrics
+        : mockLyrics.map((text) => ({ text }));
       const nextIndex = currentLine + 1;
       return sourceLines[nextIndex]?.text ?? "";
     },
-    [currentLine, lyrics]
+    [currentLine, displayedLyrics]
   );
 
   const hasSyncedLyrics = lyrics.length > 0;
   const hasPlaybackContext = isSpotifyConnected || Boolean(playback);
   const canRetryLyrics = Boolean(playback) && !hasSyncedLyrics && !isLyricsLoading;
   const currentLyricText =
-    lyrics[currentLine]?.text ?? (hasPlaybackContext ? lyricsStatus : mockLyrics[currentLine]);
+    displayedLyrics[currentLine]?.text ?? (hasPlaybackContext ? lyricsStatus : mockLyrics[currentLine]);
   const trackLabel = playback ? `${playback.title} - ${playback.artist}` : "Waiting for Spotify";
   const progressLabel = playback
     ? `${formatTime(estimatedProgressMs)} / ${formatTime(playback.duration_ms)}`
@@ -146,10 +201,146 @@ function App() {
   }
 
   useEffect(() => {
+    try {
+      localStorage.setItem(fontScaleStorageKey, String(fontScale));
+    } catch {
+      // Preference persistence should not block font resizing.
+    }
+  }, [fontScale]);
+
+  useEffect(() => {
+    window.addEventListener("blur", finishResizeDrag);
+    return () => {
+      window.removeEventListener("blur", finishResizeDrag);
+      finishResizeDrag();
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const container = lyricsContainer.current;
+    const content = lyricsContent.current;
+    if (!container || !content) return;
+    const measuredContainer = container;
+    const measuredContent = content;
+
+    let animationFrame = 0;
+    const desiredScale = fontScale / 100;
+    const minimumFitScale = 0.34;
+
+    function setScale(scale: number) {
+      measuredContainer.style.setProperty("--fitted-lyrics-scale", String(scale));
+    }
+
+    function contentFits() {
+      return (
+        measuredContent.scrollHeight <= measuredContainer.clientHeight + 1 &&
+        measuredContent.scrollWidth <= measuredContainer.clientWidth + 1
+      );
+    }
+
+    function fitCurrentLayout() {
+      setScale(desiredScale);
+      if (contentFits()) return true;
+
+      setScale(minimumFitScale);
+      if (!contentFits()) return false;
+
+      let lowerScale = minimumFitScale;
+      let upperScale = desiredScale;
+      for (let iteration = 0; iteration < 8; iteration += 1) {
+        const candidateScale = (lowerScale + upperScale) / 2;
+        setScale(candidateScale);
+        if (contentFits()) {
+          lowerScale = candidateScale;
+        } else {
+          upperScale = candidateScale;
+        }
+      }
+
+      setScale(lowerScale);
+      return true;
+    }
+
+    function fitLyrics() {
+      if (measuredContainer.clientWidth === 0 || measuredContainer.clientHeight === 0) return;
+
+      delete measuredContainer.dataset.fitTight;
+      delete measuredContainer.dataset.fitMinimal;
+      delete measuredContainer.dataset.fitOverflow;
+
+      if (fitCurrentLayout()) return;
+
+      measuredContainer.dataset.fitTight = "true";
+      if (fitCurrentLayout()) return;
+
+      if (hasPlaybackContext) {
+        measuredContainer.dataset.fitMinimal = "true";
+        if (fitCurrentLayout()) return;
+      }
+
+      measuredContainer.dataset.fitOverflow = "true";
+      setScale(minimumFitScale);
+    }
+
+    function scheduleFit() {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(fitLyrics);
+    }
+
+    const resizeObserver = new ResizeObserver(scheduleFit);
+    resizeObserver.observe(measuredContainer);
+    scheduleFit();
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+    };
+  }, [
+    fontScale,
+    currentLyricText,
+    nextLine,
+    mode,
+    showTitle,
+    showTimer,
+    showControls,
+    hasPlaybackContext,
+    canRetryLyrics,
+    trackLabel,
+    spotifyStatus
+  ]);
+
+  useEffect(() => {
     if (!playback || lyrics.length === 0) return;
 
     setCurrentLine(getActiveLyricIndex(lyrics, estimatedProgressMs));
   }, [estimatedProgressMs, lyrics, playback]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    setRomanizedLyrics([]);
+    setLyricsTextMode("original");
+    if (lyrics.length === 0) {
+      setIsRomanizing(false);
+      return;
+    }
+
+    setIsRomanizing(true);
+    void romanizeLyrics(lyrics)
+      .then((lines) => {
+        if (!isCancelled) setRomanizedLyrics(lines);
+      })
+      .catch(() => {
+        if (!isCancelled) setRomanizedLyrics([]);
+      })
+      .finally(() => {
+        if (!isCancelled) setIsRomanizing(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [lyrics]);
 
   useEffect(() => {
     const tickTimer = window.setInterval(() => {
@@ -282,6 +473,64 @@ function App() {
     setLyricsRetryCount((count) => count + 1);
   }
 
+  function changeFontScale(change: number) {
+    setFontScale((value) =>
+      Math.min(maximumFontScale, Math.max(minimumFontScale, value + change))
+    );
+  }
+
+  function handleResizeStart(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0 || !window.floatLyrics) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    window.floatLyrics.startOverlayResize(event.screenX, event.screenY);
+    resizeDrag.current = {
+      pointerId: event.pointerId,
+      nextX: event.screenX,
+      nextY: event.screenY,
+      animationFrame: null
+    };
+  }
+
+  function finishResizeDrag() {
+    const drag = resizeDrag.current;
+    if (!drag) return;
+
+    if (drag.animationFrame !== null) window.cancelAnimationFrame(drag.animationFrame);
+    resizeDrag.current = null;
+    window.floatLyrics?.endOverlayResize();
+  }
+
+  function handleResizeMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = resizeDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    drag.nextX = event.screenX;
+    drag.nextY = event.screenY;
+    if (drag.animationFrame !== null) return;
+
+    drag.animationFrame = window.requestAnimationFrame(() => {
+      const currentDrag = resizeDrag.current;
+      if (!currentDrag) return;
+
+      window.floatLyrics?.resizeOverlay(currentDrag.nextX, currentDrag.nextY);
+      currentDrag.animationFrame = null;
+    });
+  }
+
+  function handleResizeEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = resizeDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    window.floatLyrics?.resizeOverlay(drag.nextX, drag.nextY);
+    finishResizeDrag();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
   async function handlePlaybackControl(action: "previous" | "playPause" | "next") {
     try {
       let didUseSystemControl = false;
@@ -321,7 +570,10 @@ function App() {
   }
 
   return (
-    <main className="overlay-shell" style={{ opacity: opacity / 100 }}>
+    <main
+      className="overlay-shell"
+      style={{ opacity: opacity / 100 }}
+    >
       <section className="drag-region" aria-label="Draggable lyric overlay">
         <div className="top-bar">
           <div className="window-chrome" aria-label="Window controls">
@@ -335,6 +587,9 @@ function App() {
               <span aria-hidden="true">×</span>
             </button>
           </div>
+          <div className="drag-handle" aria-hidden="true">
+            <GripHorizontal size={17} />
+          </div>
           <button
             className="customize-button"
             type="button"
@@ -347,8 +602,14 @@ function App() {
           </button>
         </div>
 
-        <div className="lyrics" aria-live="polite">
-          <div className="spotify-panel">
+        <div
+          className="lyrics"
+          aria-live="polite"
+          ref={lyricsContainer}
+          style={{ "--fitted-lyrics-scale": fontScale / 100 } as CSSProperties}
+        >
+          <div className="lyrics-content" ref={lyricsContent}>
+            <div className="spotify-panel">
             {hasPlaybackContext ? (
               <>
                 {showTitle && <div className="track-title">{trackLabel}</div>}
@@ -374,109 +635,183 @@ function App() {
                 )}
               </>
             )}
-          </div>
+            </div>
 
-          {hasPlaybackContext && <p className="current-line">{currentLyricText}</p>}
-          {canRetryLyrics && (
-            <button
-              className="lyrics-retry action-button"
-              type="button"
-              aria-label="Retry lyrics lookup"
-              title="Retry lyrics lookup"
-              onClick={handleRetryLyrics}
-            >
-              <RefreshCw size={15} />
-              <span>Retry</span>
-            </button>
-          )}
-          {hasPlaybackContext && mode === "compact" && hasSyncedLyrics && (
-            <p className="next-line">{nextLine}</p>
-          )}
+            {hasPlaybackContext && <p className="current-line">{currentLyricText}</p>}
+            {canRetryLyrics && (
+              <button
+                className="lyrics-retry action-button"
+                type="button"
+                aria-label="Retry lyrics lookup"
+                title="Retry lyrics lookup"
+                onClick={handleRetryLyrics}
+              >
+                <RefreshCw size={15} />
+                <span>Retry</span>
+              </button>
+            )}
+            {hasPlaybackContext && mode === "compact" && hasSyncedLyrics && (
+              <p className="next-line">{nextLine}</p>
+            )}
+          </div>
         </div>
 
         {showControls && (
-        <section className="controls" aria-label="Overlay controls">
-          {hasPlaybackContext && (
-            <div className="playback-controls" role="group" aria-label="Spotify playback controls">
-              <button
-                className="round-button"
-                type="button"
-                aria-label="Previous track"
-                title="Previous track"
-                onClick={() => void handlePlaybackControl("previous")}
-              >
-                <SkipBack size={15} />
-              </button>
-              <button
-                className="round-button primary-round"
-                type="button"
-                aria-label={playback?.is_playing ? "Pause Spotify" : "Play Spotify"}
-                title={playback?.is_playing ? "Pause Spotify" : "Play Spotify"}
-                onClick={() => void handlePlaybackControl("playPause")}
-              >
-                {playback?.is_playing ? <Pause size={16} /> : <Play size={16} />}
-              </button>
-              <button
-                className="round-button"
-                type="button"
-                aria-label="Next track"
-                title="Next track"
-                onClick={() => void handlePlaybackControl("next")}
-              >
-                <SkipForward size={15} />
-              </button>
+          <section className="controls" aria-label="Overlay controls">
+            <div className="controls-main">
+              {hasPlaybackContext && (
+                <div className="playback-controls" role="group" aria-label="Spotify playback controls">
+                  <button
+                    className="round-button"
+                    type="button"
+                    aria-label="Previous track"
+                    title="Previous track"
+                    onClick={() => void handlePlaybackControl("previous")}
+                  >
+                    <SkipBack size={15} />
+                  </button>
+                  <button
+                    className="round-button primary-round"
+                    type="button"
+                    aria-label={playback?.is_playing ? "Pause Spotify" : "Play Spotify"}
+                    title={playback?.is_playing ? "Pause Spotify" : "Play Spotify"}
+                    onClick={() => void handlePlaybackControl("playPause")}
+                  >
+                    {playback?.is_playing ? <Pause size={16} /> : <Play size={16} />}
+                  </button>
+                  <button
+                    className="round-button"
+                    type="button"
+                    aria-label="Next track"
+                    title="Next track"
+                    onClick={() => void handlePlaybackControl("next")}
+                  >
+                    <SkipForward size={15} />
+                  </button>
+                </div>
+              )}
+
+              <div className="appearance-controls">
+                <div className="font-size-control" role="group" aria-label="Lyric font size">
+                  <Type size={14} aria-hidden="true" />
+                  <button
+                    className="font-step-button"
+                    type="button"
+                    aria-label="Decrease lyric font size"
+                    title="Decrease lyric font size"
+                    disabled={fontScale <= minimumFontScale}
+                    onClick={() => changeFontScale(-fontScaleStep)}
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <input
+                    type="range"
+                    min={minimumFontScale}
+                    max={maximumFontScale}
+                    step={fontScaleStep}
+                    value={fontScale}
+                    aria-label={`Lyric font size ${fontScale}%`}
+                    title={`Lyric font size ${fontScale}%`}
+                    onChange={(event) => setFontScale(Number(event.target.value))}
+                  />
+                  <button
+                    className="font-step-button"
+                    type="button"
+                    aria-label="Increase lyric font size"
+                    title="Increase lyric font size"
+                    disabled={fontScale >= maximumFontScale}
+                    onClick={() => changeFontScale(fontScaleStep)}
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+                <label className="opacity-control" title={`Overlay opacity ${opacity}%`}>
+                  <Blend size={14} aria-hidden="true" />
+                  <span className="sr-only">Overlay opacity</span>
+                  <input
+                    type="range"
+                    min="30"
+                    max="100"
+                    value={opacity}
+                    aria-label={`Overlay opacity ${opacity}%`}
+                    onChange={(event) => setOpacity(Number(event.target.value))}
+                  />
+                </label>
+              </div>
             </div>
-          )}
-          <div className="control-group" role="group" aria-label="Lyric display">
-            <span className="control-label">Lyrics</span>
-            <button
-              type="button"
-              className={mode === "compact" ? "active" : ""}
-              title="Show current and next lyric line"
-              onClick={() => setMode("compact")}
-            >
-              Compact
-            </button>
-            <button
-              type="button"
-              className={mode === "focus" ? "active" : ""}
-              title="Show only the current lyric line"
-              onClick={() => setMode("focus")}
-            >
-              Focus
-            </button>
-          </div>
-          <div className="control-group" role="group" aria-label="Metadata display">
-            <span className="control-label">Show</span>
-            <button
-              type="button"
-              className={showTitle ? "active" : ""}
-              title="Show or hide song title"
-              onClick={() => setShowTitle((value) => !value)}
-            >
-              Title
-            </button>
-            <button
-              type="button"
-              className={showTimer ? "active" : ""}
-              title="Show or hide playback time"
-              onClick={() => setShowTimer((value) => !value)}
-            >
-              Time
-            </button>
-          </div>
-          <label className="opacity-control">
-            <span>Opacity</span>
-            <input
-              type="range"
-              min="30"
-              max="100"
-              value={opacity}
-              onChange={(event) => setOpacity(Number(event.target.value))}
-            />
-          </label>
-        </section>
+
+            <div className="controls-options">
+              <div className="control-group" role="group" aria-label="Lyric display">
+                <span className="control-label">Lyrics</span>
+                <button
+                  type="button"
+                  className={mode === "compact" ? "active" : ""}
+                  title="Show current and next lyric line"
+                  onClick={() => setMode("compact")}
+                >
+                  Compact
+                </button>
+                <button
+                  type="button"
+                  className={mode === "focus" ? "active" : ""}
+                  title="Show only the current lyric line"
+                  onClick={() => setMode("focus")}
+                >
+                  Focus
+                </button>
+              </div>
+              <div className="control-group" role="group" aria-label="Metadata display">
+                <span className="control-label">Show</span>
+                <button
+                  type="button"
+                  className={showTitle ? "active" : ""}
+                  title="Show or hide song title"
+                  onClick={() => setShowTitle((value) => !value)}
+                >
+                  Title
+                </button>
+                <button
+                  type="button"
+                  className={showTimer ? "active" : ""}
+                  title="Show or hide playback time"
+                  onClick={() => setShowTimer((value) => !value)}
+                >
+                  Time
+                </button>
+              </div>
+              {(isRomanizing || romanizedLyrics.length > 0) && (
+                <div className="control-group" role="group" aria-label="Lyric script">
+                  <span className="control-label">Script</span>
+                  <button
+                    type="button"
+                    className={lyricsTextMode === "original" ? "active" : ""}
+                    onClick={() => setLyricsTextMode("original")}
+                  >
+                    Original
+                  </button>
+                  <button
+                    type="button"
+                    className={lyricsTextMode === "romanized" ? "active" : ""}
+                    disabled={isRomanizing || romanizedLyrics.length === 0}
+                    title={isRomanizing ? "Preparing romanized lyrics" : "Show romanized lyrics"}
+                    onClick={() => setLyricsTextMode("romanized")}
+                  >
+                    {isRomanizing ? "Preparing..." : "Romanized"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
         )}
+        <div
+          className="resize-grip"
+          aria-hidden="true"
+          onPointerDown={handleResizeStart}
+          onPointerMove={handleResizeMove}
+          onPointerUp={handleResizeEnd}
+          onPointerCancel={handleResizeEnd}
+          onLostPointerCapture={handleResizeEnd}
+        />
       </section>
     </main>
   );

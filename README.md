@@ -26,10 +26,13 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 - Optional Spotify login with Authorization Code Flow + PKCE
 - Spotify Web API fallback for remote playback
 - Synced lyric lookup and timestamp parsing
+- Original and locally generated romanized lyrics for non-Latin scripts
 - Recent lyrics cache for tracks that have already been found
 - Compact mode: current line + next line
 - Focus mode: current line only
 - Opacity control
+- Independent, remembered lyric font sizing
+- Remembered freeform window resizing
 - Spotify playback controls for previous, play/pause, and next
 - `Cmd+Shift+L` shortcut to show or hide the overlay
 - Native macOS Spotify control support through AppleScript
@@ -65,10 +68,10 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 
 If a release is available:
 
-1. Open the [FloatLyrics Releases page](https://github.com/jasonnn404/FloatLyrics/releases).
-2. Download the latest `.dmg` for your Mac:
-   - `arm64` for Apple Silicon Macs
-   - `x64` for Intel Macs
+1. Download FloatLyrics 0.2.0 for your Mac:
+   - [Apple Silicon (`arm64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.2.0/FloatLyrics-0.2.0-arm64.dmg)
+   - [Intel (`x64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.2.0/FloatLyrics-0.2.0-x64.dmg)
+   - [All FloatLyrics releases](https://github.com/jasonnn404/FloatLyrics/releases)
 3. Open the `.dmg`.
 4. Drag `FloatLyrics` into `Applications`.
 5. Open FloatLyrics.
@@ -87,8 +90,8 @@ npm run dist:mac
 
 The generated DMG installers will be in the `release/` folder:
 
-- `release/FloatLyrics-0.1.0-arm64.dmg` for Apple Silicon Macs
-- `release/FloatLyrics-0.1.0-x64.dmg` for Intel Macs
+- `release/FloatLyrics-0.2.0-arm64.dmg` for Apple Silicon Macs
+- `release/FloatLyrics-0.2.0-x64.dmg` for Intel Macs
 
 Open the matching `.dmg`, drag `FloatLyrics` into `Applications`, then launch it from Finder or Launchpad. If macOS warns that the app is unsigned, right-click `FloatLyrics` and choose `Open` the first time.
 
@@ -219,18 +222,18 @@ The generated `.dmg` will be in the `release/` folder.
 
 On Apple Silicon, this creates:
 
-- `release/FloatLyrics-0.1.0-arm64.dmg`
-- `release/FloatLyrics-0.1.0-x64.dmg`
+- `release/FloatLyrics-0.2.0-arm64.dmg`
+- `release/FloatLyrics-0.2.0-x64.dmg`
 
 Publish the generated installers as GitHub Release downloads:
 
 ```bash
-gh release create v0.1.0 \
-  release/FloatLyrics-0.1.0-arm64.dmg \
-  release/FloatLyrics-0.1.0-x64.dmg \
+gh release create v0.2.0 \
+  release/FloatLyrics-0.2.0-arm64.dmg \
+  release/FloatLyrics-0.2.0-x64.dmg \
   --target main \
-  --title "FloatLyrics 0.1.0" \
-  --notes "Local-first Spotify desktop playback, optional Spotify API fallback, lyrics caching, fixed packaged app launch, and a new app icon."
+  --title "FloatLyrics 0.2.0" \
+  --notes "Romanized lyrics, independent font sizing, responsive lyric fitting, redesigned controls, reliable window resizing, and a lighter edge-to-edge overlay."
 ```
 
 Run the built app locally:
