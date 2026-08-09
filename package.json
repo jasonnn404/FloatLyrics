@@ -1,8 +1,12 @@
 {
   "name": "floatlyrics",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
-  "description": "Transparent macOS desktop overlay for synced lyrics.",
+  "description": "Transparent macOS and Linux desktop overlay for synced lyrics.",
+  "author": {
+    "name": "Jason Li",
+    "email": "jasonnn404l@gmail.com"
+  },
   "main": "dist-electron/main.js",
   "scripts": {
     "predev": "node scripts/free-dev-port.mjs",
@@ -10,6 +14,7 @@
     "build": "tsc && tsc -p tsconfig.node.json && vite build",
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac dmg --arm64 --x64",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit"
   },
@@ -46,10 +51,33 @@
         "width": 540,
         "height": 380
       }
+    },
+    "linux": {
+      "category": "Audio",
+      "icon": "build/icon.png",
+      "executableName": "floatlyrics",
+      "maintainer": "Jason Li <jasonnn404l@gmail.com>",
+      "synopsis": "Always-on-top synced lyrics for Spotify",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     }
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
+    "dbus-native": "^0.15.1",
     "kuroshiro": "^1.2.0",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "lucide-react": "^1.14.0",

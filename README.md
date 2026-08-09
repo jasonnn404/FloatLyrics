@@ -4,23 +4,21 @@
   <img src="./build/icon.png" alt="FloatLyrics app icon" width="128" height="128">
 </p>
 
-FloatLyrics is a macOS desktop app that shows synced lyrics in a transparent, always-on-top overlay while Spotify plays in the background.
+FloatLyrics is a macOS and Linux desktop app that shows synced lyrics in a transparent, always-on-top overlay while Spotify plays in the background.
 
-This project is currently built for macOS only.
-
-> Early prototype: FloatLyrics is macOS-only. If a DMG is not available in Releases yet, you can build it locally from the project folder.
+Prebuilt macOS downloads are published in GitHub Releases. Ubuntu x64 installers are built automatically as AppImage and DEB packages.
 
 ## Overview
 
-FloatLyrics is an Electron desktop overlay for Spotify listeners. It reads the current track from the local Spotify desktop app first, fetches synced LRC lyrics, and displays the current and next lyric line in a compact floating window.
+FloatLyrics is an Electron desktop overlay for Spotify listeners. It reads the current track from the local Spotify desktop app first, fetches synced LRC lyrics, and displays the current and next lyric line in a compact floating window. Local Spotify integration uses AppleScript on macOS and MPRIS over D-Bus on Linux.
 
-Spotify Web API login is optional. It can be used as a fallback for Spotify Connect or remote playback, but the normal macOS desktop flow does not require a Spotify Developer app, Client ID, `.env` file, redirect URI, or API allowlist.
+Spotify Web API login is optional. It can be used as a fallback for Spotify Connect or remote playback, but the normal macOS and Ubuntu desktop flows do not require a Spotify Developer app, Client ID, `.env` file, redirect URI, or API allowlist.
 
 The app is intentionally minimal: no full player UI, no playlists, and no account management. The main goal is a clean lyrics overlay that stays out of the way.
 
 ## Features
 
-- Transparent, frameless macOS lyrics overlay
+- Transparent, frameless macOS and Linux lyrics overlay
 - Always-on-top window
 - Local Spotify desktop track detection with no developer setup
 - Optional Spotify login with Authorization Code Flow + PKCE
@@ -34,8 +32,8 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 - Independent, remembered lyric font sizing
 - Remembered freeform window resizing
 - Spotify playback controls for previous, play/pause, and next
-- `Cmd+Shift+L` shortcut to show or hide the overlay
-- Native macOS Spotify control support through AppleScript
+- `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Linux to show or hide the overlay
+- Native Spotify control through AppleScript on macOS and MPRIS on Linux
 
 ## Tech Stack
 
@@ -43,7 +41,7 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 - React
 - TypeScript
 - Vite
-- Native macOS Spotify automation
+- Native Spotify automation through macOS AppleScript or Linux MPRIS/D-Bus
 - Optional Spotify Web API
 - LRCLIB synced lyrics API
 - lucide-react icons
@@ -64,6 +62,30 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 
 ## Installation
 
+### Download the Ubuntu App
+
+Ubuntu x64 packages are produced automatically whenever `main` is updated:
+
+1. Open the [Build Ubuntu installers workflow](https://github.com/jasonnn404/FloatLyrics/actions/workflows/build-linux.yml).
+2. Open the newest successful run and download its `ubuntu-x64` artifact.
+3. Extract the downloaded ZIP.
+4. Install the `.deb` with Ubuntu App Center, or run this from the extracted folder:
+
+```bash
+sudo apt install ./FloatLyrics-*-linux-x64.deb
+```
+
+Alternatively, make the AppImage executable and run it:
+
+```bash
+chmod +x FloatLyrics-*-linux-x64.AppImage
+./FloatLyrics-*-linux-x64.AppImage
+```
+
+Open the Spotify desktop app and play a song. FloatLyrics detects Ubuntu Spotify through MPRIS, so Spotify Developer credentials are not required.
+
+The overlay works on both Wayland and X11. Exact always-on-top behavior is controlled by the Linux desktop compositor; if your customized Ubuntu desktop does not keep the overlay above other windows, select the standard Ubuntu session or Ubuntu on Xorg at login.
+
 ### Download the macOS App
 
 If a release is available:
@@ -80,7 +102,7 @@ If macOS warns that the app cannot be opened because it is from an unidentified 
 
 Current releases are ad-hoc signed so macOS can verify that the app bundle was not modified, but they are not Apple-notarized. A Developer ID-signed and notarized release is planned.
 
-### Build the App Locally
+### Build the macOS App Locally
 
 If you are building from source and want to run FloatLyrics without Terminal:
 
@@ -90,8 +112,8 @@ npm run dist:mac
 
 The generated DMG installers will be in the `release/` folder:
 
-- `release/FloatLyrics-0.2.1-arm64.dmg` for Apple Silicon Macs
-- `release/FloatLyrics-0.2.1-x64.dmg` for Intel Macs
+- `release/FloatLyrics-0.3.0-arm64.dmg` for Apple Silicon Macs
+- `release/FloatLyrics-0.3.0-x64.dmg` for Intel Macs
 
 Open the matching `.dmg`, drag `FloatLyrics` into `Applications`, then launch it from Finder or Launchpad. If macOS warns that the developer cannot be verified, right-click `FloatLyrics` and choose `Open` the first time.
 
@@ -102,13 +124,13 @@ Open the matching `.dmg`, drag `FloatLyrics` into `Applications`, then launch it
    - Click the green `Code` button.
    - Click `Download ZIP`.
    - Unzip the folder.
-3. Open the macOS Terminal app.
-4. Drag the unzipped FloatLyrics folder into the Terminal window after typing `cd `.
+3. Open Terminal.
+4. Change into the unzipped FloatLyrics folder.
 
 It should look something like this:
 
 ```bash
-cd /Users/yourname/Downloads/FloatLyrics
+cd /path/to/Downloads/FloatLyrics
 ```
 
 5. Press Enter, then install the app dependencies:
@@ -127,7 +149,7 @@ npm install
 
 ## Basic Usage
 
-If you installed the app from a DMG, open `FloatLyrics` from `Applications` or Launchpad.
+If you installed the app from a DMG or DEB, open `FloatLyrics` from your application launcher. You can also run the AppImage directly.
 
 If you are developing from source, start FloatLyrics from Terminal:
 
@@ -141,7 +163,7 @@ Then:
 2. Play a song.
 3. FloatLyrics should detect the local Spotify playback and show synced lyrics.
 
-The first time FloatLyrics controls or reads Spotify, macOS may ask for automation permission. Allow it so the overlay can read playback and control previous/play/pause/next.
+On macOS, the first control or playback read may trigger an automation permission request. Allow it so the overlay can read playback and control previous/play/pause/next. Linux uses the desktop session's MPRIS interface and does not require this permission.
 
 Lyrics are fetched from LRCLIB, so new songs need internet access. Once lyrics have been found for a track, FloatLyrics caches them locally and can reuse them later if the lyrics API is unavailable.
 
@@ -222,18 +244,26 @@ The generated `.dmg` will be in the `release/` folder.
 
 On Apple Silicon, this creates:
 
-- `release/FloatLyrics-0.2.1-arm64.dmg`
-- `release/FloatLyrics-0.2.1-x64.dmg`
+- `release/FloatLyrics-0.3.0-arm64.dmg`
+- `release/FloatLyrics-0.3.0-x64.dmg`
+
+Build Ubuntu x64 AppImage and DEB installers on an Ubuntu machine:
+
+```bash
+npm run dist:linux
+```
+
+GitHub Actions runs this Linux build automatically on every push to `main`, so a Mac developer does not need to cross-compile the Ubuntu packages locally.
 
 Publish the generated installers as GitHub Release downloads:
 
 ```bash
-gh release create v0.2.1 \
-  release/FloatLyrics-0.2.1-arm64.dmg \
-  release/FloatLyrics-0.2.1-x64.dmg \
+gh release create v0.3.0 \
+  release/FloatLyrics-0.3.0-arm64.dmg \
+  release/FloatLyrics-0.3.0-x64.dmg \
   --target main \
-  --title "FloatLyrics 0.2.1" \
-  --notes "Fixes macOS incorrectly reporting downloaded app bundles as damaged by applying a complete ad-hoc signature to both architectures."
+  --title "FloatLyrics 0.3.0" \
+  --notes "Adds Ubuntu support through Spotify MPRIS, plus AppImage and DEB packages."
 ```
 
 Run the built app locally:

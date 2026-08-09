@@ -13,6 +13,12 @@ import { execFile } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
+import {
+  closeLinuxSpotify,
+  controlLinuxSpotify,
+  getLinuxSpotifyPlayback,
+  type SystemSpotifyPlayback
+} from "./linuxSpotify.js";
 
 let mainWindow: BrowserWindow | null = null;
 let spotifyAuthWindow: BrowserWindow | null = null;
@@ -26,15 +32,6 @@ const spotifyNoPlayback = "__FLOATLYRICS_NO_PLAYBACK__";
 const spotifyFieldDelimiter = "__FLOATLYRICS_FIELD__";
 const defaultOverlaySize = { width: 900, height: 340 };
 const minimumOverlaySize = { width: 340, height: 180 };
-
-type SystemSpotifyPlayback = {
-  title: string;
-  artist: string;
-  album: string;
-  progress_ms: number;
-  duration_ms: number;
-  is_playing: boolean;
-};
 
 function getDefaultOverlayBounds(size = defaultOverlaySize) {
   const workArea = screen.getPrimaryDisplay().workArea;
@@ -171,8 +168,10 @@ function createWindow() {
     alwaysOnTop: true,
     hasShadow: false,
     icon: runtimeAppIcon,
-    titleBarStyle: "hidden",
-    trafficLightPosition: { x: -100, y: -100 },
+    ...(process.platform === "darwin" ? {
+      titleBarStyle: "hidden" as const,
+      trafficLightPosition: { x: -100, y: -100 }
+    } : {}),
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -181,7 +180,11 @@ function createWindow() {
     }
   });
 
-  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  if (process.platform === "darwin") {
+    mainWindow.setAlwaysOnTop(true, "screen-saver");
+  } else {
+    mainWindow.setAlwaysOnTop(true);
+  }
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   mainWindow.setFullScreenable(false);
 
@@ -314,9 +317,11 @@ ipcMain.on("overlay:resize-end", (event) => {
 });
 
 ipcMain.handle("spotify:system-control", async (_event, action: "previous" | "playPause" | "next") => {
-  if (process.platform !== "darwin") {
-    return false;
+  if (process.platform === "linux") {
+    return controlLinuxSpotify(action);
   }
+
+  if (process.platform !== "darwin") return false;
 
   const spotifyCommand =
     action === "previous" ? "previous track" : action === "next" ? "next track" : "playpause";
@@ -330,9 +335,11 @@ ipcMain.handle("spotify:system-control", async (_event, action: "previous" | "pl
 });
 
 ipcMain.handle("spotify:get-system-playback", async (): Promise<SystemSpotifyPlayback | null> => {
-  if (process.platform !== "darwin") {
-    return null;
+  if (process.platform === "linux") {
+    return getLinuxSpotifyPlayback();
   }
+
+  if (process.platform !== "darwin") return null;
 
   try {
     const { stdout } = await execFileAsync("osascript", [
@@ -473,4 +480,5 @@ app.on("window-all-closed", () => {
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  void closeLinuxSpotify();
 });
