@@ -68,17 +68,17 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 
 If a release is available:
 
-1. Download FloatLyrics 0.2.0 for your Mac:
-   - [Apple Silicon (`arm64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.2.0/FloatLyrics-0.2.0-arm64.dmg)
-   - [Intel (`x64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.2.0/FloatLyrics-0.2.0-x64.dmg)
+1. Download FloatLyrics 0.2.1 for your Mac:
+   - [Apple Silicon (`arm64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.2.1/FloatLyrics-0.2.1-arm64.dmg)
+   - [Intel (`x64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.2.1/FloatLyrics-0.2.1-x64.dmg)
    - [All FloatLyrics releases](https://github.com/jasonnn404/FloatLyrics/releases)
-3. Open the `.dmg`.
-4. Drag `FloatLyrics` into `Applications`.
-5. Open FloatLyrics.
+2. Open the `.dmg`.
+3. Drag `FloatLyrics` into `Applications`.
+4. Open FloatLyrics.
 
 If macOS warns that the app cannot be opened because it is from an unidentified developer, right-click the app and choose `Open`.
 
-Current local builds are unsigned and not notarized. A signed macOS release is planned.
+Current releases are ad-hoc signed so macOS can verify that the app bundle was not modified, but they are not Apple-notarized. A Developer ID-signed and notarized release is planned.
 
 ### Build the App Locally
 
@@ -90,10 +90,10 @@ npm run dist:mac
 
 The generated DMG installers will be in the `release/` folder:
 
-- `release/FloatLyrics-0.2.0-arm64.dmg` for Apple Silicon Macs
-- `release/FloatLyrics-0.2.0-x64.dmg` for Intel Macs
+- `release/FloatLyrics-0.2.1-arm64.dmg` for Apple Silicon Macs
+- `release/FloatLyrics-0.2.1-x64.dmg` for Intel Macs
 
-Open the matching `.dmg`, drag `FloatLyrics` into `Applications`, then launch it from Finder or Launchpad. If macOS warns that the app is unsigned, right-click `FloatLyrics` and choose `Open` the first time.
+Open the matching `.dmg`, drag `FloatLyrics` into `Applications`, then launch it from Finder or Launchpad. If macOS warns that the developer cannot be verified, right-click `FloatLyrics` and choose `Open` the first time.
 
 ### Simple Setup
 
@@ -222,18 +222,18 @@ The generated `.dmg` will be in the `release/` folder.
 
 On Apple Silicon, this creates:
 
-- `release/FloatLyrics-0.2.0-arm64.dmg`
-- `release/FloatLyrics-0.2.0-x64.dmg`
+- `release/FloatLyrics-0.2.1-arm64.dmg`
+- `release/FloatLyrics-0.2.1-x64.dmg`
 
 Publish the generated installers as GitHub Release downloads:
 
 ```bash
-gh release create v0.2.0 \
-  release/FloatLyrics-0.2.0-arm64.dmg \
-  release/FloatLyrics-0.2.0-x64.dmg \
+gh release create v0.2.1 \
+  release/FloatLyrics-0.2.1-arm64.dmg \
+  release/FloatLyrics-0.2.1-x64.dmg \
   --target main \
-  --title "FloatLyrics 0.2.0" \
-  --notes "Romanized lyrics, independent font sizing, responsive lyric fitting, redesigned controls, reliable window resizing, and a lighter edge-to-edge overlay."
+  --title "FloatLyrics 0.2.1" \
+  --notes "Fixes macOS incorrectly reporting downloaded app bundles as damaged by applying a complete ad-hoc signature to both architectures."
 ```
 
 Run the built app locally:

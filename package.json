@@ -1,6 +1,6 @@
 {
   "name": "floatlyrics",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Transparent macOS desktop overlay for synced lyrics.",
   "main": "dist-electron/main.js",
@@ -28,6 +28,8 @@
     "mac": {
       "category": "public.app-category.music",
       "icon": "build/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false,
       "target": [
         {
           "target": "dmg",
