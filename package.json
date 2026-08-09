@@ -1,6 +1,6 @@
 {
   "name": "floatlyrics",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "Transparent macOS and Linux desktop overlay for synced lyrics.",
   "desktopName": "floatlyrics.desktop",
@@ -52,6 +52,10 @@
         "width": 540,
         "height": 380
       }
+    },
+    "deb": {
+      "afterInstall": "build/linux-after-install.sh",
+      "afterRemove": "build/linux-after-remove.sh"
     },
     "linux": {
       "category": "Audio",
