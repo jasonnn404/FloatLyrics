@@ -64,12 +64,13 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 
 ### Download the Ubuntu App
 
-Ubuntu x64 packages are produced automatically whenever `main` is updated:
+Download FloatLyrics 0.3.0 for Ubuntu x64:
 
-1. Open the [Build Ubuntu installers workflow](https://github.com/jasonnn404/FloatLyrics/actions/workflows/build-linux.yml).
-2. Open the newest successful run and download its `ubuntu-x64` artifact.
-3. Extract the downloaded ZIP.
-4. Install the `.deb` with Ubuntu App Center, or run this from the extracted folder:
+- [DEB installer](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.3.0/FloatLyrics-0.3.0-linux-amd64.deb) — recommended for Ubuntu
+- [AppImage](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.3.0/FloatLyrics-0.3.0-linux-x86_64.AppImage) — portable version
+- [All FloatLyrics releases](https://github.com/jasonnn404/FloatLyrics/releases)
+
+Install the downloaded `.deb` with Ubuntu App Center, or run this from its folder:
 
 ```bash
 sudo apt install ./FloatLyrics-*-linux-amd64.deb
@@ -83,6 +84,8 @@ chmod +x FloatLyrics-*-linux-x86_64.AppImage
 ```
 
 Open the Spotify desktop app and play a song. FloatLyrics detects Ubuntu Spotify through MPRIS, so Spotify Developer credentials are not required.
+
+Development builds are also available from the [Build Ubuntu installers workflow](https://github.com/jasonnn404/FloatLyrics/actions/workflows/build-linux.yml) after every update to `main`.
 
 The overlay works on both Wayland and X11. Exact always-on-top behavior is controlled by the Linux desktop compositor; if your customized Ubuntu desktop does not keep the overlay above other windows, select the standard Ubuntu session or Ubuntu on Xorg at login.
 

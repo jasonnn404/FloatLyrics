@@ -3,6 +3,9 @@ name: Build Ubuntu installers
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - README.md
+      - screenshots/**
   workflow_dispatch:
 
 permissions:
