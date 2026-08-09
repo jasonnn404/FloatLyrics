@@ -3,6 +3,7 @@
   "version": "0.3.0",
   "private": true,
   "description": "Transparent macOS and Linux desktop overlay for synced lyrics.",
+  "desktopName": "floatlyrics.desktop",
   "author": {
     "name": "Jason Li",
     "email": "jasonnn404l@gmail.com"
@@ -14,7 +15,7 @@
     "build": "tsc && tsc -p tsconfig.node.json && vite build",
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac dmg --arm64 --x64",
-    "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64 --publish never",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit"
   },
@@ -57,6 +58,7 @@
       "icon": "build/icon.png",
       "executableName": "floatlyrics",
       "maintainer": "Jason Li <jasonnn404l@gmail.com>",
+      "syncDesktopName": true,
       "synopsis": "Always-on-top synced lyrics for Spotify",
       "target": [
         {

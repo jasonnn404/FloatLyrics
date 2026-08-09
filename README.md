@@ -72,14 +72,14 @@ Ubuntu x64 packages are produced automatically whenever `main` is updated:
 4. Install the `.deb` with Ubuntu App Center, or run this from the extracted folder:
 
 ```bash
-sudo apt install ./FloatLyrics-*-linux-x64.deb
+sudo apt install ./FloatLyrics-*-linux-amd64.deb
 ```
 
 Alternatively, make the AppImage executable and run it:
 
 ```bash
-chmod +x FloatLyrics-*-linux-x64.AppImage
-./FloatLyrics-*-linux-x64.AppImage
+chmod +x FloatLyrics-*-linux-x86_64.AppImage
+./FloatLyrics-*-linux-x86_64.AppImage
 ```
 
 Open the Spotify desktop app and play a song. FloatLyrics detects Ubuntu Spotify through MPRIS, so Spotify Developer credentials are not required.
