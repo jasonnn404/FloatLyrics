@@ -1,5 +1,5 @@
 import dbus = require("dbus-native");
-import { toPlain, type DBusInterface, type MessageBus } from "dbus-native";
+import { toPlain, type MessageBus } from "dbus-native";
 
 const mprisObjectPath = "/org/mpris/MediaPlayer2";
 const mprisPlayerInterface = "org.mpris.MediaPlayer2.Player";
@@ -15,15 +15,9 @@ export type SystemSpotifyPlayback = {
   is_playing: boolean;
 };
 
-interface MprisPlayer extends DBusInterface {
-  Next(): PromiseLike<void>;
-  PlayPause(): PromiseLike<void>;
-  Previous(): PromiseLike<void>;
-}
-
 let sessionBus: MessageBus | null = null;
 let spotifyServiceName: string | null = null;
-let spotifyPlayer: (MprisPlayer & DBusInterface) | null = null;
+let lastReportedError = "";
 
 function getSessionBus() {
   if (!sessionBus) {
@@ -56,10 +50,7 @@ async function findSpotifyService(bus: MessageBus) {
 
   for (const name of mprisNames) {
     try {
-      const root = await bus
-        .getService(name)
-        .getInterface(mprisObjectPath, mprisRootInterface);
-      const identity = await root.$readProp("Identity");
+      const identity = await readMprisProperty(bus, name, mprisRootInterface, "Identity");
       if (typeof identity === "string" && identity.toLowerCase().includes("spotify")) {
         spotifyServiceName = name;
         return name;
@@ -73,17 +64,28 @@ async function findSpotifyService(bus: MessageBus) {
   return null;
 }
 
-async function getSpotifyPlayer() {
-  if (spotifyPlayer) return spotifyPlayer;
+async function readMprisProperty(
+  bus: MessageBus,
+  serviceName: string,
+  interfaceName: string,
+  propertyName: string
+) {
+  return toPlain(await bus.invoke({
+    destination: serviceName,
+    path: mprisObjectPath,
+    interface: "org.freedesktop.DBus.Properties",
+    member: "Get",
+    signature: "ss",
+    body: [interfaceName, propertyName]
+  }));
+}
 
-  const bus = getSessionBus();
-  const serviceName = await findSpotifyService(bus);
-  if (!serviceName) return null;
+function reportError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message === lastReportedError) return;
 
-  spotifyPlayer = await bus
-    .getService(serviceName)
-    .getInterface<MprisPlayer>(mprisObjectPath, mprisPlayerInterface);
-  return spotifyPlayer;
+  lastReportedError = message;
+  console.warn(`[FloatLyrics] Spotify MPRIS error: ${message}`);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -100,14 +102,18 @@ function asMilliseconds(value: unknown) {
 
 export async function getLinuxSpotifyPlayback(): Promise<SystemSpotifyPlayback | null> {
   try {
-    const player = await getSpotifyPlayer();
-    if (!player) return null;
+    const bus = getSessionBus();
+    const serviceName = await findSpotifyService(bus);
+    if (!serviceName) return null;
 
-    const properties = asRecord(await player.$readAllProps());
-    const playbackStatus = properties.PlaybackStatus;
+    const [playbackStatus, metadataValue, position] = await Promise.all([
+      readMprisProperty(bus, serviceName, mprisPlayerInterface, "PlaybackStatus"),
+      readMprisProperty(bus, serviceName, mprisPlayerInterface, "Metadata"),
+      readMprisProperty(bus, serviceName, mprisPlayerInterface, "Position")
+    ]);
     if (playbackStatus === "Stopped") return null;
 
-    const metadata = asRecord(properties.Metadata);
+    const metadata = asRecord(metadataValue);
     const title = metadata["xesam:title"];
     if (typeof title !== "string" || !title.trim()) return null;
 
@@ -121,13 +127,13 @@ export async function getLinuxSpotifyPlayback(): Promise<SystemSpotifyPlayback |
       title,
       artist: artist || "Unknown artist",
       album: typeof album === "string" && album ? album : "Unknown album",
-      progress_ms: asMilliseconds(properties.Position),
+      progress_ms: asMilliseconds(position),
       duration_ms: asMilliseconds(metadata["mpris:length"]),
       is_playing: playbackStatus === "Playing"
     };
-  } catch {
+  } catch (error) {
+    reportError(error);
     spotifyServiceName = null;
-    spotifyPlayer = null;
     return null;
   }
 }
@@ -136,21 +142,22 @@ export async function controlLinuxSpotify(
   action: "previous" | "playPause" | "next"
 ) {
   try {
-    const player = await getSpotifyPlayer();
-    if (!player) return false;
+    const bus = getSessionBus();
+    const serviceName = await findSpotifyService(bus);
+    if (!serviceName) return false;
 
-    if (action === "previous") {
-      await player.Previous();
-    } else if (action === "next") {
-      await player.Next();
-    } else {
-      await player.PlayPause();
-    }
+    const member = action === "previous" ? "Previous" : action === "next" ? "Next" : "PlayPause";
+    await bus.invoke({
+      destination: serviceName,
+      path: mprisObjectPath,
+      interface: mprisPlayerInterface,
+      member
+    });
 
     return true;
-  } catch {
+  } catch (error) {
+    reportError(error);
     spotifyServiceName = null;
-    spotifyPlayer = null;
     return false;
   }
 }
@@ -159,6 +166,6 @@ export async function closeLinuxSpotify() {
   const bus = sessionBus;
   sessionBus = null;
   spotifyServiceName = null;
-  spotifyPlayer = null;
+  lastReportedError = "";
   if (bus) await bus.close();
 }
