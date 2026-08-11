@@ -87,7 +87,7 @@ Open the Spotify desktop app and play a song. FloatLyrics detects Ubuntu Spotify
 
 Development builds are also available from the [Build Ubuntu installers workflow](https://github.com/jasonnn404/FloatLyrics/actions/workflows/build-linux.yml) after every update to `main`.
 
-The overlay works on both Wayland and X11. Exact always-on-top behavior is controlled by the Linux desktop compositor; if your customized Ubuntu desktop does not keep the overlay above other windows, select the standard Ubuntu session or Ubuntu on Xorg at login.
+On Linux, FloatLyrics runs through XWayland so the window manager can reliably keep the overlay above other windows while still allowing it to be clicked, moved, and resized. Ubuntu includes XWayland by default.
 
 ### Download the macOS App
 
