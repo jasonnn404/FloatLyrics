@@ -64,10 +64,10 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 
 ### Download the Ubuntu App
 
-Download FloatLyrics 0.3.2 for Ubuntu x64:
+Download FloatLyrics 0.3.3 for Ubuntu x64:
 
-- [DEB installer](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.3.2/FloatLyrics-0.3.2-linux-amd64.deb) — recommended for Ubuntu and Spotify Snap
-- [AppImage](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.3.2/FloatLyrics-0.3.2-linux-x86_64.AppImage) — portable version
+- [DEB installer](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.3.3/FloatLyrics-0.3.3-linux-amd64.deb) — recommended for Ubuntu and Spotify Snap
+- [AppImage](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.3.3/FloatLyrics-0.3.3-linux-x86_64.AppImage) — portable version
 - [All FloatLyrics releases](https://github.com/jasonnn404/FloatLyrics/releases)
 
 Install the downloaded `.deb` with Ubuntu App Center, or run this from its folder:
@@ -115,8 +115,8 @@ npm run dist:mac
 
 The generated DMG installers will be in the `release/` folder:
 
-- `release/FloatLyrics-0.3.2-arm64.dmg` for Apple Silicon Macs
-- `release/FloatLyrics-0.3.2-x64.dmg` for Intel Macs
+- `release/FloatLyrics-0.3.3-arm64.dmg` for Apple Silicon Macs
+- `release/FloatLyrics-0.3.3-x64.dmg` for Intel Macs
 
 Open the matching `.dmg`, drag `FloatLyrics` into `Applications`, then launch it from Finder or Launchpad. If macOS warns that the developer cannot be verified, right-click `FloatLyrics` and choose `Open` the first time.
 
@@ -247,8 +247,8 @@ The generated `.dmg` will be in the `release/` folder.
 
 On Apple Silicon, this creates:
 
-- `release/FloatLyrics-0.3.2-arm64.dmg`
-- `release/FloatLyrics-0.3.2-x64.dmg`
+- `release/FloatLyrics-0.3.3-arm64.dmg`
+- `release/FloatLyrics-0.3.3-x64.dmg`
 
 Build Ubuntu x64 AppImage and DEB installers on an Ubuntu machine:
 
@@ -261,11 +261,11 @@ GitHub Actions runs this Linux build automatically on every push to `main`, so a
 Publish the generated installers as GitHub Release downloads:
 
 ```bash
-gh release create v0.3.2 \
-  release/FloatLyrics-0.3.2-arm64.dmg \
-  release/FloatLyrics-0.3.2-x64.dmg \
+gh release create v0.3.3 \
+  release/FloatLyrics-0.3.3-arm64.dmg \
+  release/FloatLyrics-0.3.3-x64.dmg \
   --target main \
-  --title "FloatLyrics 0.3.2" \
+  --title "FloatLyrics 0.3.3" \
   --notes "Adds Ubuntu support through Spotify MPRIS, plus AppImage and DEB packages."
 ```
 
