@@ -33,13 +33,6 @@ const spotifyFieldDelimiter = "__FLOATLYRICS_FIELD__";
 const defaultOverlaySize = { width: 900, height: 340 };
 const minimumOverlaySize = { width: 340, height: 180 };
 
-// Native Wayland does not let Electron reliably control a window's z-order,
-// position, or focus. The overlay depends on all three, so use XWayland on
-// Linux where alwaysOnTop is backed by the window manager's X11 hints.
-if (process.platform === "linux") {
-  app.commandLine.appendSwitch("ozone-platform", "x11");
-}
-
 function getDefaultOverlayBounds(size = defaultOverlaySize) {
   const workArea = screen.getPrimaryDisplay().workArea;
   const width = Math.min(size.width, workArea.width);
@@ -173,6 +166,9 @@ function createWindow() {
     resizable: false,
     maximizable: false,
     alwaysOnTop: true,
+    // Electron keeps non-focusable Linux windows above the window manager's
+    // normal stack. Pointer controls still work without stealing app focus.
+    focusable: process.platform !== "linux",
     hasShadow: false,
     icon: runtimeAppIcon,
     ...(process.platform === "darwin" ? {
