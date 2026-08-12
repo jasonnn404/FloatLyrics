@@ -166,9 +166,6 @@ function createWindow() {
     resizable: false,
     maximizable: false,
     alwaysOnTop: true,
-    // Electron keeps non-focusable Linux windows above the window manager's
-    // normal stack. Pointer controls still work without stealing app focus.
-    focusable: process.platform !== "linux",
     hasShadow: false,
     icon: runtimeAppIcon,
     ...(process.platform === "darwin" ? {

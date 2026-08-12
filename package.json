@@ -1,6 +1,6 @@
 {
   "name": "floatlyrics",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "description": "Transparent macOS and Linux desktop overlay for synced lyrics.",
   "desktopName": "floatlyrics.desktop",
@@ -61,6 +61,9 @@
       "category": "Audio",
       "icon": "build/linux-icons",
       "executableName": "floatlyrics",
+      "executableArgs": [
+        "--ozone-platform=x11"
+      ],
       "maintainer": "Jason Li <jasonnn404l@gmail.com>",
       "syncDesktopName": true,
       "synopsis": "Always-on-top synced lyrics for Spotify",
