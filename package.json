@@ -1,8 +1,8 @@
 {
   "name": "floatlyrics",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "private": true,
-  "description": "Transparent macOS and Linux desktop overlay for synced lyrics.",
+  "description": "Transparent macOS, Windows, and Linux desktop overlay for synced lyrics.",
   "desktopName": "floatlyrics.desktop",
   "author": {
     "name": "Jason Li",
@@ -15,7 +15,9 @@
     "build": "tsc && tsc -p tsconfig.node.json && vite build",
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac dmg --arm64 --x64",
+    "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never",
     "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64 --publish never",
+    "test": "npm run build && node --test tests/*.test.mjs",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit"
   },
@@ -52,6 +54,24 @@
         "width": 540,
         "height": 380
       }
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-windows-${arch}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     },
     "deb": {
       "afterInstall": "build/linux-after-install.sh",

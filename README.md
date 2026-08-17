@@ -4,21 +4,21 @@
   <img src="./build/icon.png" alt="FloatLyrics app icon" width="128" height="128">
 </p>
 
-FloatLyrics is a macOS and Linux desktop app that shows synced lyrics in a transparent, always-on-top overlay while Spotify plays in the background.
+FloatLyrics is a macOS, Windows, and Linux desktop app that shows synced lyrics in a transparent, always-on-top overlay while Spotify plays in the background.
 
-Prebuilt macOS downloads are published in GitHub Releases. Ubuntu x64 installers are built automatically as AppImage and DEB packages.
+Prebuilt macOS downloads are published in GitHub Releases. Windows x64 and Ubuntu x64 installers are built automatically by GitHub Actions.
 
 ## Overview
 
 FloatLyrics is an Electron desktop overlay for Spotify listeners. It reads the current track from the local Spotify desktop app first, fetches synced LRC lyrics, and displays the current and next lyric line in a compact floating window. Local Spotify integration uses AppleScript on macOS and MPRIS over D-Bus on Linux.
 
-Spotify Web API login is optional. It can be used as a fallback for Spotify Connect or remote playback, but the normal macOS and Ubuntu desktop flows do not require a Spotify Developer app, Client ID, `.env` file, redirect URI, or API allowlist.
+Spotify Web API login is optional. It can be used as a fallback for Spotify Connect or remote playback, but normal local desktop playback does not require a Spotify Developer app, Client ID, `.env` file, redirect URI, or API allowlist.
 
 The app is intentionally minimal: no full player UI, no playlists, and no account management. The main goal is a clean lyrics overlay that stays out of the way.
 
 ## Features
 
-- Transparent, frameless macOS and Linux lyrics overlay
+- Transparent, frameless macOS, Windows, and Linux lyrics overlay
 - Always-on-top window
 - Local Spotify desktop track detection with no developer setup
 - Optional Spotify login with Authorization Code Flow + PKCE
@@ -32,8 +32,8 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 - Independent, remembered lyric font sizing
 - Remembered freeform window resizing
 - Spotify playback controls for previous, play/pause, and next
-- `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Linux to show or hide the overlay
-- Native Spotify control through AppleScript on macOS and MPRIS on Linux
+- `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Windows and Linux to show or hide the overlay
+- Native Spotify control through AppleScript on macOS, Windows media sessions on Windows, and MPRIS on Linux
 
 ## Tech Stack
 
@@ -41,7 +41,7 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 - React
 - TypeScript
 - Vite
-- Native Spotify automation through macOS AppleScript or Linux MPRIS/D-Bus
+- Native Spotify automation through macOS AppleScript, Windows media sessions, or Linux MPRIS/D-Bus
 - Optional Spotify Web API
 - LRCLIB synced lyrics API
 - lucide-react icons
@@ -61,6 +61,26 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 ![FloatLyrics controls](./screenshots/settings.png)
 
 ## Installation
+
+### Download the Windows App
+
+Windows x64 installers are produced by the [Build Windows installer workflow](https://github.com/jasonnn404/FloatLyrics/actions/workflows/build-windows.yml) after every update to `main`.
+
+1. Open the latest successful workflow run and download its Windows artifact.
+2. Unzip the artifact and run `FloatLyrics-0.4.0-windows-x64-setup.exe`.
+3. If Microsoft Defender SmartScreen warns about an unknown publisher, choose **More info**, verify the app name, and choose **Run anyway**. Current builds are not code-signed.
+4. Open Spotify desktop, play a song, and launch FloatLyrics from the Start menu or desktop shortcut.
+
+FloatLyrics supports Windows 10 version 1809 or newer and Windows 11. It reads Spotify through the Windows system media session, so Spotify Developer credentials are not required. The Spotify desktop app must expose an active media session; if it does not appear, play a track and restart Spotify once.
+
+To build the installer on Windows locally:
+
+```powershell
+npm install
+npm run dist:win
+```
+
+The installer will be written to `release/`.
 
 ### Download the Ubuntu App
 

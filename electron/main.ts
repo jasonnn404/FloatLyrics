@@ -19,6 +19,11 @@ import {
   getLinuxSpotifyPlayback,
   type SystemSpotifyPlayback
 } from "./linuxSpotify.js";
+import {
+  closeWindowsSpotify,
+  controlWindowsSpotify,
+  getWindowsSpotifyPlayback
+} from "./windowsSpotify.js";
 
 let mainWindow: BrowserWindow | null = null;
 let spotifyAuthWindow: BrowserWindow | null = null;
@@ -321,6 +326,10 @@ ipcMain.handle("spotify:system-control", async (_event, action: "previous" | "pl
     return controlLinuxSpotify(action);
   }
 
+  if (process.platform === "win32") {
+    return controlWindowsSpotify(action);
+  }
+
   if (process.platform !== "darwin") return false;
 
   const spotifyCommand =
@@ -337,6 +346,10 @@ ipcMain.handle("spotify:system-control", async (_event, action: "previous" | "pl
 ipcMain.handle("spotify:get-system-playback", async (): Promise<SystemSpotifyPlayback | null> => {
   if (process.platform === "linux") {
     return getLinuxSpotifyPlayback();
+  }
+
+  if (process.platform === "win32") {
+    return getWindowsSpotifyPlayback();
   }
 
   if (process.platform !== "darwin") return null;
@@ -481,4 +494,5 @@ app.on("window-all-closed", () => {
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
   void closeLinuxSpotify();
+  closeWindowsSpotify();
 });
