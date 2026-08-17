@@ -70,3 +70,14 @@ test("every built-in preset has readable lyric contrast", () => {
     );
   }
 });
+
+test("Midnight is monochrome and Green uses the Spotify-inspired palette", () => {
+  const midnight = themePresets.find((theme) => theme.id === "midnight");
+  const green = themePresets.find((theme) => theme.id === "green");
+
+  assert.equal(midnight?.accent, "#FFFFFF");
+  assert.deepEqual(
+    { text: green?.text, background: green?.background, accent: green?.accent },
+    { text: "#1ED760", background: "#0B1F14", accent: "#1ED760" }
+  );
+});

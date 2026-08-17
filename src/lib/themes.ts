@@ -29,7 +29,7 @@ export const themePresets: ThemePreset[] = [
     name: "Midnight",
     text: "#EDEEF0",
     background: "#18191B",
-    accent: "#0090FF",
+    accent: "#FFFFFF",
     backgroundOpacity: 82
   },
   {
@@ -67,10 +67,10 @@ export const themePresets: ThemePreset[] = [
   {
     id: "green",
     name: "Green",
-    text: "#3DD68C",
-    background: "#121B17",
-    accent: "#30A46C",
-    backgroundOpacity: 86
+    text: "#1ED760",
+    background: "#0B1F14",
+    accent: "#1ED760",
+    backgroundOpacity: 90
   }
 ];
 

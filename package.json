@@ -1,6 +1,6 @@
 {
   "name": "floatlyrics",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "Transparent macOS, Windows, and Linux desktop overlay for synced lyrics.",
   "desktopName": "floatlyrics.desktop",
