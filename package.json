@@ -1,6 +1,6 @@
 {
   "name": "floatlyrics",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Transparent macOS, Windows, and Linux desktop overlay for synced lyrics.",
   "desktopName": "floatlyrics.desktop",
@@ -17,7 +17,7 @@
     "dist:mac": "npm run build && electron-builder --mac dmg --arm64 --x64",
     "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never",
     "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64 --publish never",
-    "test": "npm run build && node --test tests/*.test.mjs",
+    "test": "npm run build && tsc src/lib/themes.ts --outDir .test-build --module CommonJS --moduleResolution Node --target ES2022 --skipLibCheck && node --test tests/*.test.mjs",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit"
   },

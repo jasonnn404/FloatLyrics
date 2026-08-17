@@ -1,4 +1,9 @@
 :root {
+  --theme-text: #ffffff;
+  --theme-background: #080a0c;
+  --theme-accent: #ffffff;
+  --theme-accent-text: #07090d;
+  --theme-background-opacity: 66;
   color: #f8fafc;
   background: transparent;
   color-scheme: dark;
@@ -30,9 +35,68 @@ input {
   -webkit-app-region: no-drag;
 }
 
+input[type="range"] {
+  --range-progress: 0%;
+  appearance: none;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  accent-color: var(--theme-accent);
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--theme-accent) 0,
+    var(--theme-accent) var(--range-progress),
+    color-mix(in srgb, var(--theme-text) 18%, transparent) var(--range-progress),
+    color-mix(in srgb, var(--theme-text) 18%, transparent) 100%
+  );
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--theme-text) 8%, transparent);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 2px solid color-mix(in srgb, var(--theme-background) 70%, transparent);
+  border-radius: 999px;
+  background: var(--theme-accent);
+  box-shadow:
+    0 2px 7px rgb(0 0 0 / 30%),
+    0 0 0 0 color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 2px 7px rgb(0 0 0 / 30%),
+    0 0 0 4px color-mix(in srgb, var(--theme-accent) 28%, transparent);
+}
+
+input[type="range"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .overlay-shell {
   width: 100vw;
   height: 100vh;
+  color: var(--theme-text);
   transition: opacity 140ms ease;
 }
 
@@ -44,13 +108,21 @@ input {
   width: 100%;
   height: 100%;
   padding: 9px 11px 12px;
-  border: 0.5px solid rgb(255 255 255 / 10%);
+  border: 0.5px solid color-mix(in srgb, var(--theme-text) 12%, transparent);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 5%), rgb(255 255 255 / 1%)),
-    rgb(8 10 12 / 66%);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--theme-text) 6%, transparent),
+      color-mix(in srgb, var(--theme-text) 1%, transparent)
+    ),
+    color-mix(
+      in srgb,
+      var(--theme-background) calc(var(--theme-background-opacity) * 1%),
+      transparent
+    );
   box-shadow:
-    inset 0 0.5px 0 rgb(255 255 255 / 7%);
+    inset 0 0.5px 0 color-mix(in srgb, var(--theme-text) 8%, transparent);
   backdrop-filter: blur(22px) saturate(140%);
   -webkit-app-region: no-drag;
 }
@@ -78,7 +150,7 @@ input {
   background: repeating-linear-gradient(
     135deg,
     transparent 0 3px,
-    rgb(255 255 255 / 72%) 3px 4px
+    color-mix(in srgb, var(--theme-text) 72%, transparent) 3px 4px
   );
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
@@ -105,7 +177,7 @@ input {
   place-items: center;
   width: 34px;
   height: 24px;
-  color: rgb(226 232 240 / 42%);
+  color: color-mix(in srgb, var(--theme-text) 42%, transparent);
   pointer-events: none;
   transform: translateX(-50%);
 }
@@ -121,7 +193,7 @@ input {
   min-height: 0;
   padding: 0 8px;
   text-align: center;
-  text-shadow: 0 2px 18px rgb(0 0 0 / 70%);
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--theme-background) 72%, transparent);
   overflow: hidden;
   -webkit-app-region: no-drag;
 }
@@ -151,7 +223,7 @@ input {
   justify-items: center;
   gap: 6px;
   margin-bottom: clamp(8px, 2.6vh, 18px);
-  color: rgb(226 232 240 / 88%);
+  color: color-mix(in srgb, var(--theme-text) 88%, transparent);
 }
 
 .spotify-login {
@@ -175,21 +247,21 @@ input {
 }
 
 .connect-title {
-  color: #ffffff;
+  color: var(--theme-text);
   font-size: 18px;
   font-weight: 800;
   line-height: 1.2;
 }
 
 .connect-copy {
-  color: rgb(226 232 240 / 70%);
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
   font-size: 13px;
   line-height: 1.3;
 }
 
 .track-title {
   max-width: 100%;
-  color: #ffffff;
+  color: var(--theme-text);
   font-size: 15px;
   font-weight: 700;
   line-height: 1.2;
@@ -208,22 +280,44 @@ input {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px 14px;
-  color: rgb(203 213 225 / 78%);
+  color: color-mix(in srgb, var(--theme-text) 78%, transparent);
   font-variant-numeric: tabular-nums;
 }
 
 .current-line {
   margin: 0;
-  color: #ffffff;
+  color: var(--theme-text);
   font-size: clamp(12px, calc(36px * var(--fitted-lyrics-scale, 1)), 64px);
   font-weight: 700;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
+.lyric-line-enter {
+  animation: lyric-line-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lyric-line-enter-next {
+  animation-delay: 35ms;
+}
+
+@keyframes lyric-line-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
 .next-line {
   margin: 10px 0 0;
-  color: rgb(226 232 240 / 72%);
+  color: color-mix(in srgb, var(--theme-text) 72%, transparent);
   font-size: clamp(10px, calc(22px * var(--fitted-lyrics-scale, 1)), 40px);
   font-weight: 500;
   line-height: 1.25;
@@ -292,7 +386,8 @@ input {
   min-height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 10%);
+  color: var(--theme-text);
+  background: color-mix(in srgb, var(--theme-text) 10%, transparent);
   -webkit-app-region: no-drag;
 }
 
@@ -308,12 +403,13 @@ input {
 }
 
 .controls {
+  position: relative;
   display: grid;
   gap: 8px;
   width: 100%;
   margin-top: 12px;
   padding: 10px 8px 0;
-  border-top: 0.5px solid rgb(255 255 255 / 8%);
+  border-top: 0.5px solid color-mix(in srgb, var(--theme-text) 9%, transparent);
   -webkit-app-region: no-drag;
 }
 
@@ -346,15 +442,41 @@ input {
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
-  border: 0.5px solid rgb(255 255 255 / 9%);
+  border: 0.5px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
   border-radius: 999px;
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 8%), rgb(255 255 255 / 3%)),
-    rgb(8 10 12 / 48%);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--theme-text) 9%, transparent),
+      color-mix(in srgb, var(--theme-text) 3%, transparent)
+    ),
+    color-mix(in srgb, var(--theme-background) 48%, transparent);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 8%),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 8%, transparent),
     0 10px 26px rgb(0 0 0 / 18%);
   backdrop-filter: blur(18px) saturate(140%);
+}
+
+.media-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.volume-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0.5px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--theme-text) 88%, transparent);
+  background: color-mix(in srgb, var(--theme-background) 42%, transparent);
+}
+
+.volume-control input {
+  width: 86px;
 }
 
 .round-button {
@@ -366,14 +488,14 @@ input {
   min-height: 38px;
   padding: 0;
   border: 0;
-  color: rgb(248 250 252 / 82%);
+  color: color-mix(in srgb, var(--theme-text) 82%, transparent);
   background: transparent;
   box-shadow: none;
 }
 
 .round-button:hover {
-  color: #ffffff;
-  background: rgb(255 255 255 / 10%);
+  color: var(--theme-text);
+  background: color-mix(in srgb, var(--theme-text) 11%, transparent);
   transform: none;
 }
 
@@ -386,15 +508,15 @@ input {
   min-width: 46px;
   min-height: 46px;
   border: 0;
-  background: #ffffff;
-  color: #050505;
+  background: var(--theme-accent);
+  color: var(--theme-accent-text);
   box-shadow:
     0 12px 30px rgb(0 0 0 / 30%),
     inset 0 -1px 0 rgb(0 0 0 / 14%);
 }
 
 .primary-round:hover {
-  background: #f1f5f9;
+  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text));
   transform: scale(1.04);
 }
 
@@ -405,10 +527,10 @@ input {
 button {
   min-height: 34px;
   padding: 0 13px;
-  border: 1px solid rgb(255 255 255 / 13%);
+  border: 1px solid color-mix(in srgb, var(--theme-text) 13%, transparent);
   border-radius: 999px;
-  color: #f8fafc;
-  background: rgb(255 255 255 / 8%);
+  color: var(--theme-text);
+  background: color-mix(in srgb, var(--theme-text) 8%, transparent);
   cursor: pointer;
   transition:
     transform 120ms ease,
@@ -423,8 +545,8 @@ button:disabled {
 
 button:hover,
 button.active {
-  background: rgb(255 255 255 / 15%);
-  border-color: rgb(255 255 255 / 22%);
+  background: color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--theme-accent) 32%, transparent);
 }
 
 button:hover {
@@ -453,10 +575,10 @@ button:hover {
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border: 0.5px solid rgb(255 255 255 / 9%);
+  border: 0.5px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
   border-radius: 999px;
-  background: rgb(0 0 0 / 24%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 7%);
+  background: color-mix(in srgb, var(--theme-background) 42%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 7%, transparent);
 }
 
 .control-group button {
@@ -467,7 +589,7 @@ button:hover {
 
 .control-label {
   padding: 0 8px 0 9px;
-  color: rgb(226 232 240 / 78%);
+  color: color-mix(in srgb, var(--theme-text) 78%, transparent);
   font-size: 12px;
   font-weight: 700;
 }
@@ -478,10 +600,10 @@ button:hover {
   gap: 5px;
   min-height: 40px;
   padding: 4px 6px 4px 10px;
-  border: 0.5px solid rgb(255 255 255 / 9%);
+  border: 0.5px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
   border-radius: 999px;
-  color: rgb(226 232 240 / 78%);
-  background: rgb(0 0 0 / 24%);
+  color: color-mix(in srgb, var(--theme-text) 78%, transparent);
+  background: color-mix(in srgb, var(--theme-background) 42%, transparent);
 }
 
 .font-size-control input {
@@ -509,14 +631,256 @@ button:hover {
   gap: 8px;
   min-height: 30px;
   padding: 0 10px;
-  border: 0.5px solid rgb(255 255 255 / 9%);
+  border: 0.5px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
   border-radius: 999px;
-  color: rgb(226 232 240 / 88%);
-  background: rgb(0 0 0 / 24%);
+  color: color-mix(in srgb, var(--theme-text) 88%, transparent);
+  background: color-mix(in srgb, var(--theme-background) 42%, transparent);
 }
 
 .opacity-control input {
   width: 96px;
+}
+
+.theme-picker {
+  display: inline-flex;
+}
+
+.theme-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 11px;
+  white-space: nowrap;
+}
+
+.theme-button-swatch {
+  width: 12px;
+  height: 12px;
+  border: 1px solid color-mix(in srgb, var(--theme-text) 38%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-background) 55%, transparent);
+}
+
+.theme-popover {
+  position: absolute;
+  z-index: 12;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  display: grid;
+  gap: 12px;
+  width: min(370px, calc(100vw - 38px));
+  max-height: min(470px, calc(100vh - 52px));
+  padding: 14px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 14px;
+  overflow: auto;
+  color: #f8fafc;
+  background: rgb(15 18 24 / 97%);
+  box-shadow:
+    0 22px 60px rgb(0 0 0 / 48%),
+    inset 0 1px 0 rgb(255 255 255 / 8%);
+  text-align: left;
+  text-shadow: none;
+  backdrop-filter: blur(24px) saturate(130%);
+}
+
+.theme-popover button {
+  color: #f8fafc;
+}
+
+.theme-popover-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.theme-popover-header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.theme-popover-header strong {
+  font-size: 14px;
+}
+
+.theme-popover-header span {
+  color: rgb(226 232 240 / 65%);
+  font-size: 11px;
+}
+
+.theme-icon-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-color: transparent;
+  background: rgb(255 255 255 / 6%);
+}
+
+.theme-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.theme-preset {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 7px;
+  border-color: rgb(255 255 255 / 9%);
+  border-radius: 9px;
+  color: rgb(248 250 252 / 76%);
+  background: rgb(255 255 255 / 4%);
+  font-size: 10px;
+}
+
+.theme-preset:hover,
+.theme-preset.active {
+  border-color: rgb(255 255 255 / 38%);
+  background: rgb(255 255 255 / 10%);
+  transform: none;
+}
+
+.theme-preset-swatch {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 28px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.theme-preset-swatch span {
+  position: absolute;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 24%);
+}
+
+.theme-preset-swatch span:first-child {
+  left: 7px;
+}
+
+.theme-preset-swatch span:last-child {
+  left: 19px;
+}
+
+.custom-theme-toggle {
+  width: 100%;
+  min-height: 32px;
+  border-color: rgb(255 255 255 / 9%);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 5%);
+  font-size: 11px;
+}
+
+.custom-theme-toggle:hover,
+.custom-theme-toggle.active {
+  border-color: rgb(255 255 255 / 30%);
+  background: rgb(255 255 255 / 11%);
+  transform: none;
+}
+
+.custom-theme-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.color-field,
+.background-strength-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  color: rgb(226 232 240 / 74%);
+  font-size: 11px;
+}
+
+.color-field-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.color-field input[type="color"] {
+  width: 34px;
+  height: 26px;
+  padding: 2px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 7%);
+  cursor: pointer;
+}
+
+.color-field code {
+  min-width: 58px;
+  color: rgb(248 250 252 / 78%);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.background-strength-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.background-strength-field output {
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+}
+
+.background-strength-field input {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.contrast-warning {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid rgb(251 191 36 / 24%);
+  border-radius: 9px;
+  color: #fde68a;
+  background: rgb(120 53 15 / 25%);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.contrast-warning button {
+  justify-self: start;
+  min-height: 27px;
+  padding: 0 9px;
+  border-color: rgb(251 191 36 / 25%);
+  background: rgb(251 191 36 / 12%);
+  font-size: 10px;
+}
+
+.theme-reset-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  border-color: transparent;
+  background: transparent;
+  color: rgb(226 232 240 / 64%) !important;
+  font-size: 10px;
+}
+
+.theme-reset-button:hover {
+  background: rgb(255 255 255 / 6%);
+  transform: none;
 }
 
 .sr-only {
@@ -618,9 +982,22 @@ button:hover {
   }
 
   .playback-controls,
+  .media-controls,
+  .volume-control,
+  .theme-picker,
   .control-group,
   .font-size-control,
   .opacity-control {
     flex: 0 0 auto;
+  }
+
+  .controls:has(.theme-popover) {
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyric-line-enter {
+    animation: none;
   }
 }

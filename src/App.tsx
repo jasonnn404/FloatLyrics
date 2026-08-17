@@ -12,14 +12,19 @@ import {
   GripHorizontal,
   LogIn,
   Minus,
+  Palette,
   Pause,
   Play,
   Plus,
   RefreshCw,
+  RotateCcw,
   SkipBack,
   SkipForward,
   SlidersHorizontal,
-  Type
+  Type,
+  Volume2,
+  VolumeX,
+  X
 } from "lucide-react";
 import {
   exchangeCallbackForTokens,
@@ -35,6 +40,18 @@ import {
 } from "./lib/spotify";
 import { formatTime, getActiveLyricIndex, getLyrics, type LyricLine } from "./lib/lyrics";
 import { romanizeLyrics } from "./lib/romanize";
+import {
+  defaultTheme,
+  getContrastRatio,
+  getReadableTextColor,
+  getThemePreset,
+  improveThemeContrast,
+  sanitizeThemeSettings,
+  themePresets,
+  themeStorageKey,
+  type ThemePresetId,
+  type ThemeSettings
+} from "./lib/themes";
 
 type DisplayMode = "compact" | "focus";
 type LyricsTextMode = "original" | "romanized";
@@ -65,6 +82,21 @@ function getStoredFontScale() {
   } catch {
     return 100;
   }
+}
+
+function getStoredTheme() {
+  try {
+    const storedTheme = localStorage.getItem(themeStorageKey);
+    return storedTheme ? sanitizeThemeSettings(JSON.parse(storedTheme)) : { ...defaultTheme };
+  } catch {
+    return { ...defaultTheme };
+  }
+}
+
+function getRangeStyle(value: number, minimum = 0, maximum = 100) {
+  const range = Math.max(1, maximum - minimum);
+  const progress = Math.min(100, Math.max(0, ((value - minimum) / range) * 100));
+  return { "--range-progress": `${progress}%` } as CSSProperties;
 }
 
 async function getSystemSpotifyPlayback() {
@@ -129,6 +161,10 @@ async function getPlaybackSnapshot(isSpotifyConnected: boolean) {
 
 function App() {
   const resizeDrag = useRef<ResizeDrag | null>(null);
+  const volumeUpdateTimer = useRef<number | null>(null);
+  const volumeUpdateSequence = useRef(0);
+  const isVolumeUpdating = useRef(false);
+  const themePicker = useRef<HTMLDivElement | null>(null);
   const lyricsContainer = useRef<HTMLDivElement | null>(null);
   const lyricsContent = useRef<HTMLDivElement | null>(null);
   const [currentLine, setCurrentLine] = useState(0);
@@ -137,12 +173,15 @@ function App() {
   const [showControls, setShowControls] = useState(true);
   const [showTitle, setShowTitle] = useState(true);
   const [showTimer, setShowTimer] = useState(true);
+  const [showThemePicker, setShowThemePicker] = useState(false);
   const [fontScale, setFontScale] = useState(getStoredFontScale);
+  const [theme, setTheme] = useState<ThemeSettings>(getStoredTheme);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(() => Boolean(getStoredTokens()));
   const [spotifyStatus, setSpotifyStatus] = useState("Spotify not connected");
   const [playback, setPlayback] = useState<SpotifyPlayback | null>(null);
   const [playbackUpdatedAt, setPlaybackUpdatedAt] = useState(Date.now());
   const [playbackClock, setPlaybackClock] = useState(Date.now());
+  const [volume, setVolume] = useState<number | null>(null);
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [romanizedLyrics, setRomanizedLyrics] = useState<LyricLine[]>([]);
   const [lyricsTextMode, setLyricsTextMode] = useState<LyricsTextMode>("original");
@@ -183,6 +222,16 @@ function App() {
   const progressLabel = playback
     ? `${formatTime(estimatedProgressMs)} / ${formatTime(playback.duration_ms)}`
     : "0:00 / 0:00";
+  const themeContrastRatio = getContrastRatio(theme.text, theme.background);
+  const hasLowThemeContrast = themeContrastRatio < 4.5 || theme.backgroundOpacity < 25;
+  const themeStyle = {
+    opacity: opacity / 100,
+    "--theme-text": theme.text,
+    "--theme-background": theme.background,
+    "--theme-accent": theme.accent,
+    "--theme-accent-text": getReadableTextColor(theme.accent),
+    "--theme-background-opacity": theme.backgroundOpacity
+  } as CSSProperties;
 
   async function handleSpotifyCallback(callbackUrl = window.location.href) {
     try {
@@ -209,12 +258,67 @@ function App() {
   }, [fontScale]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(themeStorageKey, JSON.stringify(theme));
+    } catch {
+      // Theme persistence should not block live customization.
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (!showThemePicker) return;
+
+    function handleThemePickerPointerDown(event: PointerEvent) {
+      if (!themePicker.current?.contains(event.target as Node)) setShowThemePicker(false);
+    }
+
+    function handleThemePickerKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowThemePicker(false);
+    }
+
+    window.addEventListener("pointerdown", handleThemePickerPointerDown);
+    window.addEventListener("keydown", handleThemePickerKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", handleThemePickerPointerDown);
+      window.removeEventListener("keydown", handleThemePickerKeyDown);
+    };
+  }, [showThemePicker]);
+
+  useEffect(() => {
     window.addEventListener("blur", finishResizeDrag);
     return () => {
       window.removeEventListener("blur", finishResizeDrag);
       finishResizeDrag();
+      if (volumeUpdateTimer.current !== null) {
+        window.clearTimeout(volumeUpdateTimer.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (!showControls || !playback || !window.floatLyrics?.getSpotifyVolume) {
+      setVolume(null);
+      return;
+    }
+
+    let isCancelled = false;
+    async function refreshVolume() {
+      if (volumeUpdateTimer.current !== null || isVolumeUpdating.current) return;
+      try {
+        const nextVolume = await window.floatLyrics?.getSpotifyVolume();
+        if (!isCancelled && typeof nextVolume === "number") setVolume(nextVolume);
+      } catch {
+        // A transient native integration failure should not disrupt playback polling.
+      }
+    }
+
+    void refreshVolume();
+    const volumePollTimer = window.setInterval(refreshVolume, 3000);
+    return () => {
+      isCancelled = true;
+      window.clearInterval(volumePollTimer);
+    };
+  }, [showControls, Boolean(playback)]);
 
   useLayoutEffect(() => {
     const container = lyricsContainer.current;
@@ -479,6 +583,21 @@ function App() {
     );
   }
 
+  function selectThemePreset(id: ThemePresetId) {
+    const preset = getThemePreset(id);
+    setTheme({
+      id: preset.id,
+      text: preset.text,
+      background: preset.background,
+      accent: preset.accent,
+      backgroundOpacity: preset.backgroundOpacity
+    });
+  }
+
+  function updateCustomTheme(changes: Partial<Omit<ThemeSettings, "id">>) {
+    setTheme((currentTheme) => ({ ...currentTheme, ...changes, id: "custom" }));
+  }
+
   function handleResizeStart(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0 || !window.floatLyrics) return;
 
@@ -569,10 +688,35 @@ function App() {
     }
   }
 
+  function handleVolumeChange(nextVolume: number) {
+    const normalizedVolume = Math.min(100, Math.max(0, Math.round(nextVolume)));
+    const updateSequence = ++volumeUpdateSequence.current;
+    setVolume(normalizedVolume);
+    isVolumeUpdating.current = true;
+
+    if (volumeUpdateTimer.current !== null) {
+      window.clearTimeout(volumeUpdateTimer.current);
+    }
+    volumeUpdateTimer.current = window.setTimeout(() => {
+      volumeUpdateTimer.current = null;
+      void window.floatLyrics?.setSpotifyVolume(normalizedVolume)
+        .then((didSetVolume) => {
+          if (updateSequence !== volumeUpdateSequence.current) return;
+          isVolumeUpdating.current = false;
+          if (!didSetVolume) setVolume(null);
+        })
+        .catch(() => {
+          if (updateSequence !== volumeUpdateSequence.current) return;
+          isVolumeUpdating.current = false;
+          setVolume(null);
+        });
+    }, 90);
+  }
+
   return (
     <main
       className="overlay-shell"
-      style={{ opacity: opacity / 100 }}
+      style={themeStyle}
     >
       <section className="drag-region" aria-label="Draggable lyric overlay">
         <div className="top-bar">
@@ -595,7 +739,10 @@ function App() {
             type="button"
             aria-label={showControls ? "Hide controls" : "Show controls"}
             title={showControls ? "Hide controls" : "Show controls"}
-            onClick={() => setShowControls((value) => !value)}
+            onClick={() => {
+              if (showControls) setShowThemePicker(false);
+              setShowControls((value) => !value);
+            }}
           >
             <SlidersHorizontal size={15} />
             <span>{showControls ? "Hide Controls" : "Show Controls"}</span>
@@ -637,7 +784,14 @@ function App() {
             )}
             </div>
 
-            {hasPlaybackContext && <p className="current-line">{currentLyricText}</p>}
+            {hasPlaybackContext && (
+              <p
+                className="current-line lyric-line-enter"
+                key={`current:${playback?.title ?? "waiting"}:${lyricsTextMode}:${currentLine}:${currentLyricText}`}
+              >
+                {currentLyricText}
+              </p>
+            )}
             {canRetryLyrics && (
               <button
                 className="lyrics-retry action-button"
@@ -651,7 +805,12 @@ function App() {
               </button>
             )}
             {hasPlaybackContext && mode === "compact" && hasSyncedLyrics && (
-              <p className="next-line">{nextLine}</p>
+              <p
+                className="next-line lyric-line-enter lyric-line-enter-next"
+                key={`next:${playback?.title ?? "waiting"}:${lyricsTextMode}:${currentLine}:${nextLine}`}
+              >
+                {nextLine}
+              </p>
             )}
           </div>
         </div>
@@ -660,34 +819,54 @@ function App() {
           <section className="controls" aria-label="Overlay controls">
             <div className="controls-main">
               {hasPlaybackContext && (
-                <div className="playback-controls" role="group" aria-label="Spotify playback controls">
-                  <button
-                    className="round-button"
-                    type="button"
-                    aria-label="Previous track"
-                    title="Previous track"
-                    onClick={() => void handlePlaybackControl("previous")}
-                  >
-                    <SkipBack size={15} />
-                  </button>
-                  <button
-                    className="round-button primary-round"
-                    type="button"
-                    aria-label={playback?.is_playing ? "Pause Spotify" : "Play Spotify"}
-                    title={playback?.is_playing ? "Pause Spotify" : "Play Spotify"}
-                    onClick={() => void handlePlaybackControl("playPause")}
-                  >
-                    {playback?.is_playing ? <Pause size={16} /> : <Play size={16} />}
-                  </button>
-                  <button
-                    className="round-button"
-                    type="button"
-                    aria-label="Next track"
-                    title="Next track"
-                    onClick={() => void handlePlaybackControl("next")}
-                  >
-                    <SkipForward size={15} />
-                  </button>
+                <div className="media-controls">
+                  <div className="playback-controls" role="group" aria-label="Spotify playback controls">
+                    <button
+                      className="round-button"
+                      type="button"
+                      aria-label="Previous track"
+                      title="Previous track"
+                      onClick={() => void handlePlaybackControl("previous")}
+                    >
+                      <SkipBack size={15} />
+                    </button>
+                    <button
+                      className="round-button primary-round"
+                      type="button"
+                      aria-label={playback?.is_playing ? "Pause Spotify" : "Play Spotify"}
+                      title={playback?.is_playing ? "Pause Spotify" : "Play Spotify"}
+                      onClick={() => void handlePlaybackControl("playPause")}
+                    >
+                      {playback?.is_playing ? <Pause size={16} /> : <Play size={16} />}
+                    </button>
+                    <button
+                      className="round-button"
+                      type="button"
+                      aria-label="Next track"
+                      title="Next track"
+                      onClick={() => void handlePlaybackControl("next")}
+                    >
+                      <SkipForward size={15} />
+                    </button>
+                  </div>
+                  {volume !== null && (
+                    <label className="volume-control" title={`Spotify volume ${volume}%`}>
+                      {volume === 0
+                        ? <VolumeX size={15} aria-hidden="true" />
+                        : <Volume2 size={15} aria-hidden="true" />}
+                      <span className="sr-only">Spotify volume</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={volume}
+                        style={getRangeStyle(volume)}
+                        aria-label={`Spotify volume ${volume}%`}
+                        onChange={(event) => handleVolumeChange(Number(event.target.value))}
+                      />
+                    </label>
+                  )}
                 </div>
               )}
 
@@ -710,6 +889,7 @@ function App() {
                     max={maximumFontScale}
                     step={fontScaleStep}
                     value={fontScale}
+                    style={getRangeStyle(fontScale, minimumFontScale, maximumFontScale)}
                     aria-label={`Lyric font size ${fontScale}%`}
                     title={`Lyric font size ${fontScale}%`}
                     onChange={(event) => setFontScale(Number(event.target.value))}
@@ -733,6 +913,7 @@ function App() {
                     min="30"
                     max="100"
                     value={opacity}
+                    style={getRangeStyle(opacity, 30, 100)}
                     aria-label={`Overlay opacity ${opacity}%`}
                     onChange={(event) => setOpacity(Number(event.target.value))}
                   />
@@ -741,6 +922,156 @@ function App() {
             </div>
 
             <div className="controls-options">
+              <div className="theme-picker" ref={themePicker}>
+                <button
+                  className={showThemePicker ? "theme-button active" : "theme-button"}
+                  type="button"
+                  aria-expanded={showThemePicker}
+                  aria-haspopup="dialog"
+                  title="Choose lyric colors"
+                  onClick={() => setShowThemePicker((value) => !value)}
+                >
+                  <Palette size={14} aria-hidden="true" />
+                  <span>Theme</span>
+                  <span
+                    className="theme-button-swatch"
+                    style={{ background: theme.accent }}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {showThemePicker && (
+                  <div className="theme-popover" role="dialog" aria-label="Theme colors">
+                    <div className="theme-popover-header">
+                      <div>
+                        <strong>Color theme</strong>
+                        <span>Choose a preset or make your own.</span>
+                      </div>
+                      <button
+                        className="theme-icon-button"
+                        type="button"
+                        aria-label="Close theme picker"
+                        title="Close"
+                        onClick={() => setShowThemePicker(false)}
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+
+                    <div className="theme-preset-grid" role="group" aria-label="Theme presets">
+                      {themePresets.map((preset) => (
+                        <button
+                          className={theme.id === preset.id ? "theme-preset active" : "theme-preset"}
+                          type="button"
+                          key={preset.id}
+                          aria-pressed={theme.id === preset.id}
+                          onClick={() => selectThemePreset(preset.id)}
+                        >
+                          <span
+                            className="theme-preset-swatch"
+                            style={{ background: preset.background }}
+                            aria-hidden="true"
+                          >
+                            <span style={{ background: preset.text }} />
+                            <span style={{ background: preset.accent }} />
+                          </span>
+                          <span>{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      className={theme.id === "custom" ? "custom-theme-toggle active" : "custom-theme-toggle"}
+                      type="button"
+                      aria-pressed={theme.id === "custom"}
+                      onClick={() => setTheme((currentTheme) => ({ ...currentTheme, id: "custom" }))}
+                    >
+                      Custom colors
+                    </button>
+
+                    {theme.id === "custom" && (
+                      <div className="custom-theme-controls">
+                        <label className="color-field">
+                          <span>Lyrics</span>
+                          <span className="color-field-value">
+                            <input
+                              type="color"
+                              value={theme.text}
+                              aria-label="Lyric text color"
+                              onChange={(event) => updateCustomTheme({ text: event.target.value.toUpperCase() })}
+                            />
+                            <code>{theme.text}</code>
+                          </span>
+                        </label>
+                        <label className="color-field">
+                          <span>Background</span>
+                          <span className="color-field-value">
+                            <input
+                              type="color"
+                              value={theme.background}
+                              aria-label="Overlay background color"
+                              onChange={(event) => updateCustomTheme({ background: event.target.value.toUpperCase() })}
+                            />
+                            <code>{theme.background}</code>
+                          </span>
+                        </label>
+                        <label className="color-field">
+                          <span>Accent</span>
+                          <span className="color-field-value">
+                            <input
+                              type="color"
+                              value={theme.accent}
+                              aria-label="Control accent color"
+                              onChange={(event) => updateCustomTheme({ accent: event.target.value.toUpperCase() })}
+                            />
+                            <code>{theme.accent}</code>
+                          </span>
+                        </label>
+                        <label className="background-strength-field">
+                          <span>Background strength</span>
+                          <output>{theme.backgroundOpacity}%</output>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={theme.backgroundOpacity}
+                            style={getRangeStyle(theme.backgroundOpacity)}
+                            aria-label={`Background strength ${theme.backgroundOpacity}%`}
+                            onChange={(event) => updateCustomTheme({
+                              backgroundOpacity: Number(event.target.value)
+                            })}
+                          />
+                        </label>
+
+                        {hasLowThemeContrast && (
+                          <div className="contrast-warning" role="status">
+                            <span>
+                              {themeContrastRatio < 4.5
+                                ? `Low contrast (${themeContrastRatio.toFixed(1)}:1). Lyrics may be hard to read.`
+                                : "A very transparent background can make lyrics hard to read over other windows."}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setTheme((currentTheme) => improveThemeContrast(currentTheme))}
+                            >
+                              Improve contrast
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <button
+                      className="theme-reset-button"
+                      type="button"
+                      onClick={() => setTheme({ ...defaultTheme })}
+                    >
+                      <RotateCcw size={13} />
+                      Reset to Midnight
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="control-group" role="group" aria-label="Lyric display">
                 <span className="control-label">Lyrics</span>
                 <button

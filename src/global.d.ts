@@ -12,6 +12,8 @@ declare global {
       endOverlayResize: () => void;
       getSystemPlayback: () => Promise<SpotifyPlayback | null>;
       controlSpotify: (action: "previous" | "playPause" | "next") => Promise<boolean>;
+      getSpotifyVolume: () => Promise<number | null>;
+      setSpotifyVolume: (volume: number) => Promise<boolean>;
       openSpotifyAuthWindow: (authUrl: string) => Promise<void>;
       onSpotifyCallback: (callback: (callbackUrl: string) => void) => () => void;
     };

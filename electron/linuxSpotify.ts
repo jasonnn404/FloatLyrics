@@ -1,5 +1,5 @@
 import dbus = require("dbus-native");
-import { toPlain, type MessageBus } from "dbus-native";
+import { toPlain, Variant, type MessageBus } from "dbus-native";
 
 const mprisObjectPath = "/org/mpris/MediaPlayer2";
 const mprisPlayerInterface = "org.mpris.MediaPlayer2.Player";
@@ -80,6 +80,23 @@ async function readMprisProperty(
   }));
 }
 
+async function writeMprisProperty(
+  bus: MessageBus,
+  serviceName: string,
+  interfaceName: string,
+  propertyName: string,
+  value: Variant
+) {
+  await bus.invoke({
+    destination: serviceName,
+    path: mprisObjectPath,
+    interface: "org.freedesktop.DBus.Properties",
+    member: "Set",
+    signature: "ssv",
+    body: [interfaceName, propertyName, value]
+  });
+}
+
 function reportError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   if (message === lastReportedError) return;
@@ -98,6 +115,19 @@ function asRecord(value: unknown): Record<string, unknown> {
 function asMilliseconds(value: unknown) {
   const microseconds = typeof value === "bigint" ? Number(value) : Number(value);
   return Number.isFinite(microseconds) ? Math.max(0, Math.round(microseconds / 1000)) : 0;
+}
+
+export function parseLinuxSpotifyVolume(value: unknown): number | null {
+  const volume = Number(value);
+  return Number.isFinite(volume)
+    ? Math.min(100, Math.max(0, Math.round(volume * 100)))
+    : null;
+}
+
+export function serializeLinuxSpotifyVolume(value: number): number | null {
+  return Number.isFinite(value)
+    ? Math.min(100, Math.max(0, Math.round(value))) / 100
+    : null;
 }
 
 export async function getLinuxSpotifyPlayback(): Promise<SystemSpotifyPlayback | null> {
@@ -154,6 +184,46 @@ export async function controlLinuxSpotify(
       member
     });
 
+    return true;
+  } catch (error) {
+    reportError(error);
+    spotifyServiceName = null;
+    return false;
+  }
+}
+
+export async function getLinuxSpotifyVolume(): Promise<number | null> {
+  try {
+    const bus = getSessionBus();
+    const serviceName = await findSpotifyService(bus);
+    if (!serviceName) return null;
+
+    return parseLinuxSpotifyVolume(
+      await readMprisProperty(bus, serviceName, mprisPlayerInterface, "Volume")
+    );
+  } catch (error) {
+    reportError(error);
+    spotifyServiceName = null;
+    return null;
+  }
+}
+
+export async function setLinuxSpotifyVolume(requestedVolume: number) {
+  const volume = serializeLinuxSpotifyVolume(requestedVolume);
+  if (volume === null) return false;
+
+  try {
+    const bus = getSessionBus();
+    const serviceName = await findSpotifyService(bus);
+    if (!serviceName) return false;
+
+    await writeMprisProperty(
+      bus,
+      serviceName,
+      mprisPlayerInterface,
+      "Volume",
+      new Variant("d", volume)
+    );
     return true;
   } catch (error) {
     reportError(error);

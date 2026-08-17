@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("floatLyrics", {
   getSystemPlayback: () => ipcRenderer.invoke("spotify:get-system-playback"),
   controlSpotify: (action: "previous" | "playPause" | "next") =>
     ipcRenderer.invoke("spotify:system-control", action),
+  getSpotifyVolume: () => ipcRenderer.invoke("spotify:get-volume"),
+  setSpotifyVolume: (volume: number) => ipcRenderer.invoke("spotify:set-volume", volume),
   openSpotifyAuthWindow: (authUrl: string) =>
     ipcRenderer.invoke("spotify:open-auth-window", authUrl),
   onSpotifyCallback: (callback: (callbackUrl: string) => void) => {

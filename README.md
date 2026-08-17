@@ -6,11 +6,11 @@
 
 FloatLyrics is a macOS, Windows, and Linux desktop app that shows synced lyrics in a transparent, always-on-top overlay while Spotify plays in the background.
 
-Prebuilt macOS downloads are published in GitHub Releases. Windows x64 and Ubuntu x64 installers are built automatically by GitHub Actions.
+Prebuilt macOS, Windows x64, and Ubuntu x64 downloads are published together in GitHub Releases.
 
 ## Overview
 
-FloatLyrics is an Electron desktop overlay for Spotify listeners. It reads the current track from the local Spotify desktop app first, fetches synced LRC lyrics, and displays the current and next lyric line in a compact floating window. Local Spotify integration uses AppleScript on macOS and MPRIS over D-Bus on Linux.
+FloatLyrics is an Electron desktop overlay for Spotify listeners. It reads the current track from the local Spotify desktop app first, fetches synced LRC lyrics, and displays the current and next lyric line in a compact floating window. Local Spotify integration uses AppleScript on macOS, Windows media and audio sessions on Windows, and MPRIS over D-Bus on Linux.
 
 Spotify Web API login is optional. It can be used as a fallback for Spotify Connect or remote playback, but normal local desktop playback does not require a Spotify Developer app, Client ID, `.env` file, redirect URI, or API allowlist.
 
@@ -32,6 +32,9 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 - Independent, remembered lyric font sizing
 - Remembered freeform window resizing
 - Spotify playback controls for previous, play/pause, and next
+- Spotify volume control on macOS, Windows, and Linux
+- Smooth transitions when the active lyric line changes
+- Readable color themes with custom text, background, accent, and opacity controls
 - `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Windows and Linux to show or hide the overlay
 - Native Spotify control through AppleScript on macOS, Windows media sessions on Windows, and MPRIS on Linux
 
@@ -64,10 +67,13 @@ The app is intentionally minimal: no full player UI, no playlists, and no accoun
 
 ### Download the Windows App
 
-Windows x64 installers are produced by the [Build Windows installer workflow](https://github.com/jasonnn404/FloatLyrics/actions/workflows/build-windows.yml) after every update to `main`.
+Download FloatLyrics 0.5.0 for Windows x64:
 
-1. Open the latest successful workflow run and download its Windows artifact.
-2. Unzip the artifact and run `FloatLyrics-0.4.0-windows-x64-setup.exe`.
+- [Windows installer](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.5.0/FloatLyrics-0.5.0-windows-x64-setup.exe)
+- [All FloatLyrics releases](https://github.com/jasonnn404/FloatLyrics/releases)
+
+1. Download and run `FloatLyrics-0.5.0-windows-x64-setup.exe`.
+2. Choose an installation folder when prompted.
 3. If Microsoft Defender SmartScreen warns about an unknown publisher, choose **More info**, verify the app name, and choose **Run anyway**. Current builds are not code-signed.
 4. Open Spotify desktop, play a song, and launch FloatLyrics from the Start menu or desktop shortcut.
 
@@ -84,10 +90,10 @@ The installer will be written to `release/`.
 
 ### Download the Ubuntu App
 
-Download FloatLyrics 0.3.5 for Ubuntu x64:
+Download FloatLyrics 0.5.0 for Ubuntu x64:
 
-- [DEB installer](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.3.5/FloatLyrics-0.3.5-linux-amd64.deb) — recommended for Ubuntu and Spotify Snap
-- [AppImage](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.3.5/FloatLyrics-0.3.5-linux-x86_64.AppImage) — portable version
+- [DEB installer](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.5.0/FloatLyrics-0.5.0-linux-amd64.deb) — recommended for Ubuntu and Spotify Snap
+- [AppImage](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.5.0/FloatLyrics-0.5.0-linux-x86_64.AppImage) — portable version
 - [All FloatLyrics releases](https://github.com/jasonnn404/FloatLyrics/releases)
 
 Install the downloaded `.deb` with Ubuntu App Center, or run this from its folder:
@@ -113,9 +119,9 @@ On Linux, FloatLyrics runs through XWayland so the overlay can remain above othe
 
 If a release is available:
 
-1. Download FloatLyrics 0.2.1 for your Mac:
-   - [Apple Silicon (`arm64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.2.1/FloatLyrics-0.2.1-arm64.dmg)
-   - [Intel (`x64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.2.1/FloatLyrics-0.2.1-x64.dmg)
+1. Download FloatLyrics 0.5.0 for your Mac:
+   - [Apple Silicon (`arm64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.5.0/FloatLyrics-0.5.0-arm64.dmg)
+   - [Intel (`x64`)](https://github.com/jasonnn404/FloatLyrics/releases/download/v0.5.0/FloatLyrics-0.5.0-x64.dmg)
    - [All FloatLyrics releases](https://github.com/jasonnn404/FloatLyrics/releases)
 2. Open the `.dmg`.
 3. Drag `FloatLyrics` into `Applications`.
@@ -135,8 +141,8 @@ npm run dist:mac
 
 The generated DMG installers will be in the `release/` folder:
 
-- `release/FloatLyrics-0.3.5-arm64.dmg` for Apple Silicon Macs
-- `release/FloatLyrics-0.3.5-x64.dmg` for Intel Macs
+- `release/FloatLyrics-0.5.0-arm64.dmg` for Apple Silicon Macs
+- `release/FloatLyrics-0.5.0-x64.dmg` for Intel Macs
 
 Open the matching `.dmg`, drag `FloatLyrics` into `Applications`, then launch it from Finder or Launchpad. If macOS warns that the developer cannot be verified, right-click `FloatLyrics` and choose `Open` the first time.
 
@@ -267,8 +273,8 @@ The generated `.dmg` will be in the `release/` folder.
 
 On Apple Silicon, this creates:
 
-- `release/FloatLyrics-0.3.5-arm64.dmg`
-- `release/FloatLyrics-0.3.5-x64.dmg`
+- `release/FloatLyrics-0.5.0-arm64.dmg`
+- `release/FloatLyrics-0.5.0-x64.dmg`
 
 Build Ubuntu x64 AppImage and DEB installers on an Ubuntu machine:
 
@@ -281,12 +287,15 @@ GitHub Actions runs this Linux build automatically on every push to `main`, so a
 Publish the generated installers as GitHub Release downloads:
 
 ```bash
-gh release create v0.3.5 \
-  release/FloatLyrics-0.3.5-arm64.dmg \
-  release/FloatLyrics-0.3.5-x64.dmg \
+gh release create v0.5.0 \
+  release/FloatLyrics-0.5.0-arm64.dmg \
+  release/FloatLyrics-0.5.0-x64.dmg \
+  release/FloatLyrics-0.5.0-windows-x64-setup.exe \
+  release/FloatLyrics-0.5.0-linux-x86_64.AppImage \
+  release/FloatLyrics-0.5.0-linux-amd64.deb \
   --target main \
-  --title "FloatLyrics 0.3.5" \
-  --notes "Adds Ubuntu support through Spotify MPRIS, plus AppImage and DEB packages."
+  --title "FloatLyrics 0.5.0" \
+  --notes "Cross-platform themes, lyric transitions, and Spotify volume controls."
 ```
 
 Run the built app locally:

@@ -16,13 +16,17 @@ import { promisify } from "node:util";
 import {
   closeLinuxSpotify,
   controlLinuxSpotify,
+  getLinuxSpotifyVolume,
   getLinuxSpotifyPlayback,
+  setLinuxSpotifyVolume,
   type SystemSpotifyPlayback
 } from "./linuxSpotify.js";
 import {
   closeWindowsSpotify,
   controlWindowsSpotify,
-  getWindowsSpotifyPlayback
+  getWindowsSpotifyPlayback,
+  getWindowsSpotifyVolume,
+  setWindowsSpotifyVolume
 } from "./windowsSpotify.js";
 
 let mainWindow: BrowserWindow | null = null;
@@ -341,6 +345,51 @@ ipcMain.handle("spotify:system-control", async (_event, action: "previous" | "pl
   ]);
 
   return true;
+});
+
+ipcMain.handle("spotify:get-volume", async (): Promise<number | null> => {
+  if (process.platform === "linux") return getLinuxSpotifyVolume();
+  if (process.platform === "win32") return getWindowsSpotifyVolume();
+  if (process.platform !== "darwin") return null;
+
+  try {
+    const { stdout } = await execFileAsync("osascript", [
+      "-e",
+      'tell application "Spotify"',
+      "-e",
+      "get sound volume",
+      "-e",
+      "end tell"
+    ]);
+    const volume = Number(stdout.trim());
+    return Number.isFinite(volume) ? Math.min(100, Math.max(0, Math.round(volume))) : null;
+  } catch {
+    return null;
+  }
+});
+
+ipcMain.handle("spotify:set-volume", async (_event, requestedVolume: unknown) => {
+  if (typeof requestedVolume !== "number") return false;
+  if (!Number.isFinite(requestedVolume)) return false;
+
+  const volume = Math.min(100, Math.max(0, Math.round(requestedVolume)));
+  if (process.platform === "linux") return setLinuxSpotifyVolume(volume);
+  if (process.platform === "win32") return setWindowsSpotifyVolume(volume);
+  if (process.platform !== "darwin") return false;
+
+  try {
+    await execFileAsync("osascript", [
+      "-e",
+      'tell application "Spotify"',
+      "-e",
+      `set sound volume to ${volume}`,
+      "-e",
+      "end tell"
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
 });
 
 ipcMain.handle("spotify:get-system-playback", async (): Promise<SystemSpotifyPlayback | null> => {
